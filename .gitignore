@@ -1,5 +1,15 @@
+# dependencies
 node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# data (local-fallback storage)
 data/
+
+# logs / env / OS
 *.log
 .env
 .env.*
@@ -7,3 +17,6 @@ data/
 Thumbs.db
 .vscode/
 .idea/
+
+# vercel
+.vercel/

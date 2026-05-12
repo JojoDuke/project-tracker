@@ -34,9 +34,12 @@ body {
   letter-spacing: -0.005em;
   background: var(--bg);
   color: var(--text);
+  overflow: hidden;
+}
+.app-shell {
   display: grid;
   grid-template-columns: 244px 304px 1fr;
-  overflow: hidden;
+  height: 100vh;
   position: relative;
 }
 
@@ -285,7 +288,6 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
 .ticket-checkbox:checked {
   background: var(--ticket-color, var(--accent));
   border-color: var(--ticket-color, var(--accent));
-  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0); /* placeholder, animated below */
 }
 .ticket-checkbox:checked::after {
   content: '';
@@ -677,6 +679,7 @@ dialog menu button { padding: 7px 14px; }
   border-radius: 8px;
   padding: 3px;
 }
+.segmented.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
 .segmented label {
   position: relative;
   cursor: pointer;
