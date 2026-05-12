@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>project-tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <aside id="sidebar">
+    <header class="sidebar-head">
+      <h1>Projects</h1>
+      <button id="addProject" title="Add project (n)">+</button>
+    </header>
+    <ul id="projectList"></ul>
+    <div id="archivedSection" class="archived-section" hidden>
+      <button id="archivedToggle" class="archived-toggle" type="button" aria-expanded="true">
+        <span class="caret">▾</span> <span class="archived-label">Archive</span> <span id="archivedCount" class="archived-count"></span>
+      </button>
+      <ul id="archivedProjectList"></ul>
+    </div>
+    <footer class="sidebar-foot">
+      <button id="quickCapture" title="Quick capture (q)">+ Log time</button>
+      <p class="hint">Drag on grid to block · click block to edit · hover block + × to delete · n: new project · T: new ticket · q: quick log · p: pomodoro · [ ]: week nav · t: today</p>
+    </footer>
+  </aside>
+
+  <section id="tickets">
+    <header class="tickets-head">
+      <h1>Tickets</h1>
+      <span id="ticketsProject">No project</span>
+    </header>
+    <form id="newTicketForm">
+      <input type="text" id="newTicketTitle" placeholder="+ New ticket (enter)" maxlength="200" autocomplete="off" />
+    </form>
+    <div class="tickets-toggle">
+      <label><input type="checkbox" id="showDone" checked /> Show done</label>
+      <span id="ticketCounts"></span>
+    </div>
+    <ul id="ticketList"></ul>
+  </section>
+
+  <main id="main">
+    <header id="topbar">
+      <button id="prevWeek" title="Previous week ([)">‹</button>
+      <button id="todayBtn" title="Today (t)">Today</button>
+      <button id="nextWeek" title="Next week (])">›</button>
+      <span id="weekLabel"></span>
+      <span class="spacer"></span>
+      <div id="pomodoro">
+        <span id="pomoPhase" class="pomo-phase work">Work</span>
+        <span id="pomoTime">25:00</span>
+        <button id="pomoPlay" title="Start/pause (p)">▶</button>
+        <button id="pomoReset" title="Reset">↺</button>
+        <button id="pomoSettings" title="Settings">⚙</button>
+        <span id="pomoCycles" title="Completed work cycles">0</span>
+      </div>
+      <span class="spacer"></span>
+      <span id="activeProjectLabel">No project selected</span>
+    </header>
+    <div id="grid"></div>
+  </main>
+
+  <dialog id="blockDialog">
+    <form method="dialog">
+      <h2>Edit block</h2>
+      <label>Project
+        <select id="dlgProject"></select>
+      </label>
+      <label>Note
+        <textarea id="dlgNote" rows="3" maxlength="500" placeholder="What did you do?"></textarea>
+      </label>
+      <label>Start <input type="datetime-local" id="dlgStart" step="900" /></label>
+      <label>End <input type="datetime-local" id="dlgEnd" step="900" /></label>
+      <menu>
+        <button value="delete" id="dlgDelete" type="submit" class="danger" formnovalidate>Delete</button>
+        <span class="spacer"></span>
+        <button value="cancel" type="submit" formnovalidate>Cancel</button>
+        <button value="save" id="dlgSave" type="submit" class="primary">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="quickDialog">
+    <form method="dialog">
+      <h2>Quick log</h2>
+      <p class="hint">Log time you already spent</p>
+      <label>Project
+        <select id="qcProject"></select>
+      </label>
+      <label>Duration
+        <select id="qcDuration">
+          <option value="15">15 min</option>
+          <option value="30">30 min</option>
+          <option value="45">45 min</option>
+          <option value="60" selected>1 hour</option>
+          <option value="90">1.5 hours</option>
+          <option value="120">2 hours</option>
+          <option value="180">3 hours</option>
+        </select>
+      </label>
+      <label>Ending
+        <select id="qcEnding">
+          <option value="now" selected>Just now</option>
+          <option value="15">15 min ago</option>
+          <option value="30">30 min ago</option>
+          <option value="60">1 hour ago</option>
+          <option value="120">2 hours ago</option>
+        </select>
+      </label>
+      <label>Note <input type="text" id="qcNote" placeholder="Optional" maxlength="500" /></label>
+      <menu>
+        <button value="cancel" type="submit" formnovalidate>Cancel</button>
+        <button value="log" id="qcSave" type="submit" class="primary">Log</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="pomoDialog">
+    <form method="dialog">
+      <h2>Pomodoro settings</h2>
+      <label>Work duration (minutes) <input type="number" id="pomoWork" min="1" max="180" step="1" /></label>
+      <label>Rest duration (minutes) <input type="number" id="pomoRest" min="1" max="60" step="1" /></label>
+      <label>Long rest (minutes) <input type="number" id="pomoLongRest" min="1" max="120" step="1" /></label>
+      <label>Long rest after every <input type="number" id="pomoLongEvery" min="2" max="12" step="1" /> work cycles</label>
+      <label class="row"><input type="checkbox" id="pomoAutoStart" /> Auto-start next phase</label>
+      <label class="row"><input type="checkbox" id="pomoSound" /> Sound on phase start and end</label>
+      <label class="row"><input type="checkbox" id="pomoLogBlocks" /> Log completed work to active project as a time block</label>
+      <menu>
+        <span class="spacer"></span>
+        <button value="cancel" type="submit" formnovalidate>Cancel</button>
+        <button value="save" type="submit" class="primary">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="ticketDialog">
+    <form method="dialog">
+      <h2>Edit ticket</h2>
+      <div id="tdlgBadge" class="ticket-badge-large"></div>
+      <label>Title <input type="text" id="tdlgTitle" maxlength="200" required /></label>
+      <label>Description <textarea id="tdlgDesc" rows="4" maxlength="2000"></textarea></label>
+      <label class="row"><input type="checkbox" id="tdlgDone" /> Done</label>
+      <menu>
+        <button value="delete" id="tdlgDelete" type="submit" class="danger" formnovalidate>Delete</button>
+        <span class="spacer"></span>
+        <button value="cancel" type="submit" formnovalidate>Cancel</button>
+        <button value="save" id="tdlgSave" type="submit" class="primary">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="projectDialog">
+    <form method="dialog">
+      <h2 id="pdlgTitle">New project</h2>
+      <label>Name <input type="text" id="pdlgName" maxlength="80" required /></label>
+      <div class="field-group">
+        <span class="field-label">Type</span>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="pdlgKind" value="personal" checked /><span>Personal</span></label>
+          <label><input type="radio" name="pdlgKind" value="client" /><span>Client</span></label>
+        </div>
+      </div>
+      <label id="pdlgClientWrap" hidden>Client name <input type="text" id="pdlgClient" maxlength="120" placeholder="e.g. Acme Corp" /></label>
+      <div class="field-group">
+        <span class="field-label">Status</span>
+        <div class="segmented" role="radiogroup">
+          <label><input type="radio" name="pdlgStatus" value="active" checked /><span>Active</span></label>
+          <label><input type="radio" name="pdlgStatus" value="paused" /><span>Paused</span></label>
+          <label><input type="radio" name="pdlgStatus" value="inactive" /><span>Inactive</span></label>
+          <label><input type="radio" name="pdlgStatus" value="done" /><span>Done</span></label>
+        </div>
+      </div>
+      <label>Color <input type="color" id="pdlgColor" /></label>
+      <menu>
+        <button value="delete" id="pdlgDelete" type="submit" class="danger" formnovalidate hidden>Delete</button>
+        <span class="spacer"></span>
+        <button value="cancel" type="submit" formnovalidate>Cancel</button>
+        <button value="save" id="pdlgSave" type="submit" class="primary">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
