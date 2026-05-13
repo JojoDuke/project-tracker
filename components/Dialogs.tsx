@@ -70,24 +70,24 @@ export function BlockDialog({ block, projects, onClose, onSave, onDelete }: Bloc
     >
       <form
         method="dialog"
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault();
           const action = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value');
           if (!block) {
             onClose();
             return;
           }
+          onClose();
           if (action === 'delete') {
-            await onDelete(block.id);
+            void onDelete(block.id);
           } else if (action === 'save') {
-            await onSave(block.id, {
+            void onSave(block.id, {
               projectId,
               note,
               start: parseLocalISO(start).toISOString(),
               end: parseLocalISO(end).toISOString()
             });
           }
-          onClose();
         }}
       >
         <h2>Edit block</h2>
@@ -197,24 +197,26 @@ export function ProjectDialog({ target, onClose, onSave, onDelete }: ProjectDial
     >
       <form
         method="dialog"
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault();
           const action = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value');
           if (action === 'delete' && target) {
-            await onDelete(target.id);
             onClose();
+            void onDelete(target.id);
             return;
           }
           if (action === 'save') {
             const trimmed = name.trim();
             if (!trimmed) return;
-            await onSave(target ? target.id : null, {
+            onClose();
+            void onSave(target ? target.id : null, {
               name: trimmed,
               color,
               kind,
               client: kind === 'client' ? client.trim() : '',
               status
             });
+            return;
           }
           onClose();
         }}
@@ -348,7 +350,7 @@ export function TicketDialog({ ticket, project, onClose, onSave, onDelete }: Tic
     >
       <form
         method="dialog"
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault();
           const action = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value');
           if (!ticket) {
@@ -356,11 +358,16 @@ export function TicketDialog({ ticket, project, onClose, onSave, onDelete }: Tic
             return;
           }
           if (action === 'delete') {
-            await onDelete(ticket.id);
-          } else if (action === 'save') {
+            onClose();
+            void onDelete(ticket.id);
+            return;
+          }
+          if (action === 'save') {
             const trimmed = title.trim();
             if (!trimmed) return;
-            await onSave(ticket.id, { title: trimmed, description, done });
+            onClose();
+            void onSave(ticket.id, { title: trimmed, description, done });
+            return;
           }
           onClose();
         }}
@@ -448,14 +455,14 @@ export function QuickLogDialog({ open, projects, defaultProjectId, onClose, onLo
     >
       <form
         method="dialog"
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault();
           const action = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value');
+          onClose();
           if (action === 'log' && projectId) {
             const endingValue: number | 'now' = ending === 'now' ? 'now' : parseInt(ending, 10);
-            await onLog(projectId, duration, endingValue, note);
+            void onLog(projectId, duration, endingValue, note);
           }
-          onClose();
         }}
       >
         <h2>Quick log</h2>

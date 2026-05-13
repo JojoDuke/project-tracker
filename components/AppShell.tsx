@@ -139,14 +139,29 @@ export default function AppShell() {
   const onPomoWorkBlock = useCallback(
     async (start: Date, end: Date) => {
       if (!activeProjectId) return;
-      await api.addBlock({
+      const tempId = 'tmp-' + Math.random().toString(36).slice(2);
+      const optimistic: TimeBlock = {
+        id: tempId,
         projectId: activeProjectId,
         start: start.toISOString(),
         end: end.toISOString(),
-        note: 'Pomodoro'
-      });
+        note: 'Pomodoro',
+        createdAt: new Date().toISOString()
+      };
+      setBlocks((bs) => [...bs, optimistic]);
       setPomoActiveBlockSink((n) => n + 1);
-      await refresh();
+      try {
+        const created = await api.addBlock({
+          projectId: activeProjectId,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          note: 'Pomodoro'
+        });
+        setBlocks((bs) => bs.map((b) => (b.id === tempId ? created : b)));
+      } catch {
+        setBlocks((bs) => bs.filter((b) => b.id !== tempId));
+        await refresh();
+      }
     },
     [activeProjectId, refresh]
   );
@@ -154,28 +169,51 @@ export default function AppShell() {
   // Block actions
   const addBlock = useCallback(
     async (projectId: string, start: Date, end: Date) => {
-      await api.addBlock({
+      const tempId = 'tmp-' + Math.random().toString(36).slice(2);
+      const optimistic: TimeBlock = {
+        id: tempId,
         projectId,
         start: start.toISOString(),
-        end: end.toISOString()
-      });
-      await refresh();
+        end: end.toISOString(),
+        note: '',
+        createdAt: new Date().toISOString()
+      };
+      setBlocks((bs) => [...bs, optimistic]);
+      try {
+        const created = await api.addBlock({
+          projectId,
+          start: start.toISOString(),
+          end: end.toISOString()
+        });
+        setBlocks((bs) => bs.map((b) => (b.id === tempId ? created : b)));
+      } catch {
+        setBlocks((bs) => bs.filter((b) => b.id !== tempId));
+        await refresh();
+      }
     },
     [refresh]
   );
 
   const updateBlock = useCallback(
     async (id: string, patch: Partial<TimeBlock>) => {
-      await api.updateBlock(id, patch);
-      await refresh();
+      setBlocks((bs) => bs.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+      try {
+        await api.updateBlock(id, patch);
+      } catch {
+        await refresh();
+      }
     },
     [refresh]
   );
 
   const deleteBlock = useCallback(
     async (id: string) => {
-      await api.deleteBlock(id);
-      await refresh();
+      setBlocks((bs) => bs.filter((b) => b.id !== id));
+      try {
+        await api.deleteBlock(id);
+      } catch {
+        await refresh();
+      }
     },
     [refresh]
   );
@@ -183,24 +221,50 @@ export default function AppShell() {
   // Ticket actions
   const addTicket = useCallback(
     async (projectId: string, title: string) => {
-      await api.addTicket({ projectId, title });
-      await refresh();
+      const tempId = 'tmp-' + Math.random().toString(36).slice(2);
+      const optimistic: Ticket = {
+        id: tempId,
+        projectId,
+        number: 0,
+        title,
+        description: '',
+        done: false,
+        doneAt: null,
+        order: 999999,
+        createdAt: new Date().toISOString()
+      };
+      setTickets((ts) => [...ts, optimistic]);
+      try {
+        const created = await api.addTicket({ projectId, title });
+        setTickets((ts) => ts.map((t) => (t.id === tempId ? created : t)));
+      } catch {
+        setTickets((ts) => ts.filter((t) => t.id !== tempId));
+        await refresh();
+      }
     },
     [refresh]
   );
 
   const updateTicket = useCallback(
     async (id: string, patch: Partial<Ticket>) => {
-      await api.updateTicket(id, patch);
-      await refresh();
+      setTickets((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+      try {
+        await api.updateTicket(id, patch);
+      } catch {
+        await refresh();
+      }
     },
     [refresh]
   );
 
   const deleteTicket = useCallback(
     async (id: string) => {
-      await api.deleteTicket(id);
-      await refresh();
+      setTickets((ts) => ts.filter((t) => t.id !== id));
+      try {
+        await api.deleteTicket(id);
+      } catch {
+        await refresh();
+      }
     },
     [refresh]
   );
@@ -209,20 +273,49 @@ export default function AppShell() {
   const upsertProject = useCallback(
     async (existingId: string | null, payload: { name: string; color: string; kind: 'personal' | 'client'; client: string; status: ProjectStatus }) => {
       if (existingId) {
-        await api.updateProject(existingId, payload);
+        setProjects((ps) => ps.map((p) => (p.id === existingId ? { ...p, ...payload } : p)));
+        try {
+          await api.updateProject(existingId, payload);
+        } catch {
+          await refresh();
+        }
       } else {
-        const created = await api.addProject(payload);
-        setActiveProjectId(created.id);
+        const tempId = 'tmp-' + Math.random().toString(36).slice(2);
+        const optimistic: Project = {
+          id: tempId,
+          name: payload.name,
+          color: payload.color,
+          kind: payload.kind,
+          client: payload.client,
+          status: payload.status,
+          archived: false,
+          createdAt: new Date().toISOString()
+        };
+        setProjects((ps) => [...ps, optimistic]);
+        setActiveProjectId(tempId);
+        try {
+          const created = await api.addProject(payload);
+          setProjects((ps) => ps.map((p) => (p.id === tempId ? created : p)));
+          setActiveProjectId(created.id);
+        } catch {
+          setProjects((ps) => ps.filter((p) => p.id !== tempId));
+          await refresh();
+        }
       }
-      await refresh();
     },
     [refresh, setActiveProjectId]
   );
 
   const deleteProject = useCallback(
     async (id: string) => {
-      await api.deleteProject(id);
-      await refresh();
+      setProjects((ps) => ps.filter((p) => p.id !== id));
+      setTickets((ts) => ts.filter((t) => t.projectId !== id));
+      setBlocks((bs) => bs.filter((b) => b.projectId !== id));
+      try {
+        await api.deleteProject(id);
+      } catch {
+        await refresh();
+      }
     },
     [refresh]
   );
@@ -232,13 +325,28 @@ export default function AppShell() {
     async (projectId: string, durationMin: number, endingMinAgo: number | 'now', note: string) => {
       const end = endingMinAgo === 'now' ? snap(new Date()) : snap(new Date(Date.now() - endingMinAgo * 60000));
       const start = new Date(end.getTime() - durationMin * 60000);
-      await api.addBlock({
+      const tempId = 'tmp-' + Math.random().toString(36).slice(2);
+      const optimistic: TimeBlock = {
+        id: tempId,
         projectId,
         start: start.toISOString(),
         end: end.toISOString(),
-        note
-      });
-      await refresh();
+        note,
+        createdAt: new Date().toISOString()
+      };
+      setBlocks((bs) => [...bs, optimistic]);
+      try {
+        const created = await api.addBlock({
+          projectId,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          note
+        });
+        setBlocks((bs) => bs.map((b) => (b.id === tempId ? created : b)));
+      } catch {
+        setBlocks((bs) => bs.filter((b) => b.id !== tempId));
+        await refresh();
+      }
     },
     [refresh]
   );
@@ -344,9 +452,10 @@ export default function AppShell() {
         title="Delete project?"
         message={confirmDelete ? `"${confirmDelete.name}" and all its time blocks will be permanently deleted.` : ''}
         confirmLabel="Delete"
-        onConfirm={async () => {
-          if (confirmDelete) await deleteProject(confirmDelete.id);
+        onConfirm={() => {
+          const target = confirmDelete;
           setConfirmDelete(null);
+          if (target) void deleteProject(target.id);
         }}
         onCancel={() => setConfirmDelete(null)}
       />
