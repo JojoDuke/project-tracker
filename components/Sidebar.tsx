@@ -137,6 +137,9 @@ interface ItemProps {
 }
 
 function ProjectItem({ project: p, isActive, lastTouched, onSelect, onEdit, onDelete }: ItemProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const status = projectStatus(p);
   const isArchived = status === 'inactive' || status === 'done';
   const days = daysSince(lastTouched);
@@ -152,9 +155,6 @@ function ProjectItem({ project: p, isActive, lastTouched, onSelect, onEdit, onDe
   ]
     .filter(Boolean)
     .join(' ');
-
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
