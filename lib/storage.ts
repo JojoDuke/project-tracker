@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { list, put } from '@vercel/blob';
+import { del, list, put } from '@vercel/blob';
 import type { AppState } from './types';
 
 const BLOB_KEY = 'store.json';
@@ -71,11 +71,13 @@ async function loadBlob(): Promise<AppState> {
 
 async function saveBlob(state: AppState): Promise<void> {
   writeQueue = writeQueue.then(async () => {
+    const { blobs } = await list({ prefix: BLOB_KEY });
+    const existing = blobs.find((b) => b.pathname === BLOB_KEY);
+    if (existing) await del(existing.url);
     await put(BLOB_KEY, JSON.stringify(state, null, 2), {
       access: 'public',
       contentType: 'application/json',
-      addRandomSuffix: false,
-      allowOverwrite: true
+      addRandomSuffix: false
     });
   });
   await writeQueue;
