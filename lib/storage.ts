@@ -1,14 +1,8 @@
 import 'server-only';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { del, list, put } from '@vercel/blob';
-import type { AppState } from './types';
-
-const BLOB_KEY = 'store.json';
-const LOCAL_DATA_DIR = join(process.cwd(), 'data');
-const LOCAL_DATA_FILE = join(LOCAL_DATA_DIR, 'store.json');
+import { supabase } from './supabase';
+import type { AppState, Project, Ticket, TimeBlock } from './types';
+import { normalizeKind, normalizeStatus } from './types';
 
 function defaultState(): AppState {
   return {
@@ -29,75 +23,131 @@ function defaultState(): AppState {
   };
 }
 
-function useBlob(): boolean {
-  return !!process.env.BLOB_READ_WRITE_TOKEN;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toProject(row: any): Project {
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color,
+    kind: normalizeKind(row.kind),
+    client: row.client ?? '',
+    status: normalizeStatus(row.status),
+    archived: row.archived ?? false,
+    createdAt: row.created_at
+  };
 }
 
-let writeQueue: Promise<unknown> = Promise.resolve();
-
-async function loadLocal(): Promise<AppState> {
-  if (!existsSync(LOCAL_DATA_FILE)) {
-    await mkdir(LOCAL_DATA_DIR, { recursive: true });
-    await writeFile(LOCAL_DATA_FILE, JSON.stringify(defaultState(), null, 2));
-  }
-  const raw = await readFile(LOCAL_DATA_FILE, 'utf8');
-  return JSON.parse(raw) as AppState;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toTicket(row: any): Ticket {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    number: row.number,
+    title: row.title,
+    description: row.description ?? '',
+    done: row.done,
+    doneAt: row.done_at ?? null,
+    order: row.order,
+    createdAt: row.created_at
+  };
 }
 
-async function saveLocal(state: AppState): Promise<void> {
-  writeQueue = writeQueue.then(async () => {
-    await mkdir(dirname(LOCAL_DATA_FILE), { recursive: true });
-    const tmp = LOCAL_DATA_FILE + '.tmp';
-    await writeFile(tmp, JSON.stringify(state, null, 2));
-    await rename(tmp, LOCAL_DATA_FILE);
-  });
-  await writeQueue;
-}
-
-async function loadBlob(): Promise<AppState> {
-  try {
-    const { blobs } = await list({ prefix: BLOB_KEY });
-    const blob = blobs.find((b) => b.pathname === BLOB_KEY);
-    if (!blob) throw new Error('blob not found');
-    const res = await fetch(blob.url, { cache: 'no-store' });
-    if (!res.ok) throw new Error('blob fetch failed');
-    return (await res.json()) as AppState;
-  } catch {
-    const seed = defaultState();
-    await saveBlob(seed);
-    return seed;
-  }
-}
-
-async function saveBlob(state: AppState): Promise<void> {
-  writeQueue = writeQueue.then(async () => {
-    const { blobs } = await list({ prefix: BLOB_KEY });
-    const existing = blobs.find((b) => b.pathname === BLOB_KEY);
-    if (existing) await del(existing.url);
-    await put(BLOB_KEY, JSON.stringify(state, null, 2), {
-      access: 'public',
-      contentType: 'application/json',
-      addRandomSuffix: false
-    });
-  });
-  await writeQueue;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toBlock(row: any): TimeBlock {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    start: row.start,
+    end: row.end,
+    note: row.note ?? '',
+    createdAt: row.created_at
+  };
 }
 
 export async function loadState(): Promise<AppState> {
-  const s = useBlob() ? await loadBlob() : await loadLocal();
-  if (!s.tickets) s.tickets = [];
-  if (!s.blocks) s.blocks = [];
-  for (const p of s.projects) {
-    if (!p.kind) p.kind = 'personal';
-    if (p.client === undefined) p.client = '';
-    if (!p.status) p.status = p.archived ? 'done' : 'active';
+  const [{ data: projects, error: pe }, { data: tickets, error: te }, { data: blocks, error: be }] =
+    await Promise.all([
+      supabase.from('projects').select('*').order('created_at'),
+      supabase.from('tickets').select('*').order('order'),
+      supabase.from('blocks').select('*').order('created_at')
+    ]);
+
+  if (pe) throw new Error(`projects load failed: ${pe.message}`);
+  if (te) throw new Error(`tickets load failed: ${te.message}`);
+  if (be) throw new Error(`blocks load failed: ${be.message}`);
+
+  if (!projects?.length && !tickets?.length && !blocks?.length) {
+    const seed = defaultState();
+    await saveState(seed);
+    return seed;
   }
-  return s;
+
+  return {
+    projects: (projects ?? []).map(toProject),
+    tickets: (tickets ?? []).map(toTicket),
+    blocks: (blocks ?? []).map(toBlock)
+  };
 }
 
 export async function saveState(state: AppState): Promise<void> {
-  if (useBlob()) await saveBlob(state);
-  else await saveLocal(state);
+  // Delete in order to respect any FK constraints (children first)
+  const delResults = await Promise.all([
+    supabase.from('blocks').delete().neq('id', ''),
+    supabase.from('tickets').delete().neq('id', '')
+  ]);
+  for (const { error } of delResults) {
+    if (error) throw new Error(`delete failed: ${error.message}`);
+  }
+  const { error: pe } = await supabase.from('projects').delete().neq('id', '');
+  if (pe) throw new Error(`delete projects failed: ${pe.message}`);
+
+  // Re-insert current state
+  if (state.projects.length) {
+    const { error } = await supabase.from('projects').insert(
+      state.projects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        kind: p.kind,
+        client: p.client,
+        status: p.status,
+        archived: p.archived ?? false,
+        created_at: p.createdAt
+      }))
+    );
+    if (error) throw new Error(`insert projects failed: ${error.message}`);
+  }
+
+  if (state.tickets.length) {
+    const { error } = await supabase.from('tickets').insert(
+      state.tickets.map((t) => ({
+        id: t.id,
+        project_id: t.projectId,
+        number: t.number,
+        title: t.title,
+        description: t.description,
+        done: t.done,
+        done_at: t.doneAt,
+        order: t.order,
+        created_at: t.createdAt
+      }))
+    );
+    if (error) throw new Error(`insert tickets failed: ${error.message}`);
+  }
+
+  if (state.blocks.length) {
+    const { error } = await supabase.from('blocks').insert(
+      state.blocks.map((b) => ({
+        id: b.id,
+        project_id: b.projectId,
+        start: b.start,
+        end: b.end,
+        note: b.note,
+        created_at: b.createdAt
+      }))
+    );
+    if (error) throw new Error(`insert blocks failed: ${error.message}`);
+  }
 }
 
 export async function mutate(fn: (s: AppState) => void | Promise<void>): Promise<AppState> {
