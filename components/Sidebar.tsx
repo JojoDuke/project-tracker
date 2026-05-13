@@ -20,6 +20,8 @@ interface Props {
   projects: Project[];
   blocks: TimeBlock[];
   activeProjectId: string | null;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   onSelectProject: (id: string) => void;
   onEditProject: (p: Project) => void;
   onDeleteProject: (p: Project) => void;
@@ -31,6 +33,8 @@ export default function Sidebar({
   projects,
   blocks,
   activeProjectId,
+  collapsed,
+  onToggleCollapsed,
   onSelectProject,
   onEditProject,
   onDeleteProject,
@@ -64,10 +68,25 @@ export default function Sidebar({
     else active.push(p);
   }
 
+  if (collapsed) {
+    return (
+      <aside id="sidebar" className="collapsed">
+        <button className="panel-expand-btn" onClick={onToggleCollapsed} data-tip="Expand">
+          »
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside id="sidebar">
       <header className="sidebar-head">
-        <h1>Projects</h1>
+        <h1>
+          Projects
+          <button className="panel-collapse-btn" onClick={onToggleCollapsed} data-tip="Collapse">
+            «
+          </button>
+        </h1>
         <button onClick={onNewProject} title="Add project (n)">
           +
         </button>

@@ -19,6 +19,8 @@ interface Props {
   tickets: Ticket[];
   activeProject: Project | null;
   showDone: boolean;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   onToggleShowDone: (v: boolean) => void;
   onAddTicket: (title: string) => Promise<void> | void;
   onOpenTicket: (t: Ticket) => void;
@@ -29,6 +31,8 @@ export default function TicketsPanel({
   tickets,
   activeProject,
   showDone,
+  collapsed,
+  onToggleCollapsed,
   onToggleShowDone,
   onAddTicket,
   onOpenTicket,
@@ -53,10 +57,25 @@ export default function TicketsPanel({
     await onAddTicket(title);
   };
 
+  if (collapsed) {
+    return (
+      <section id="tickets" className="collapsed">
+        <button className="panel-expand-btn" onClick={onToggleCollapsed} data-tip="Expand">
+          »
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section id="tickets">
       <header className="tickets-head">
-        <h1>Tickets</h1>
+        <h1>
+          Tickets
+          <button className="panel-collapse-btn" onClick={onToggleCollapsed} data-tip="Collapse">
+            «
+          </button>
+        </h1>
         <span id="ticketsProject">{activeProject ? activeProject.name : 'No project'}</span>
       </header>
       <form id="newTicketForm" onSubmit={handleSubmit}>

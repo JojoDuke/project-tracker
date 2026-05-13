@@ -22,6 +22,8 @@ interface UiPrefs {
   activeProjectId?: string | null;
   weekStartISO?: string | null;
   showDoneTickets?: boolean;
+  sidebarCollapsed?: boolean;
+  ticketsCollapsed?: boolean;
 }
 
 function loadUiPrefs(): UiPrefs {
@@ -55,6 +57,8 @@ export default function AppShell() {
   const [ticketEditing, setTicketEditing] = useState<Ticket | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState(false);
+  const [ticketsCollapsed, setTicketsCollapsedState] = useState(false);
 
   const setActiveProjectId = useCallback((id: string | null) => {
     setActiveProjectIdState(id);
@@ -69,6 +73,20 @@ export default function AppShell() {
   const setShowDoneTickets = useCallback((v: boolean) => {
     setShowDoneTicketsState(v);
     saveUiPrefs({ showDoneTickets: v });
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsedState((v) => {
+      saveUiPrefs({ sidebarCollapsed: !v });
+      return !v;
+    });
+  }, []);
+
+  const toggleTickets = useCallback(() => {
+    setTicketsCollapsedState((v) => {
+      saveUiPrefs({ ticketsCollapsed: !v });
+      return !v;
+    });
   }, []);
 
   const applyState = useCallback((s: AppState) => {
@@ -92,6 +110,8 @@ export default function AppShell() {
     if (prefs.activeProjectId !== undefined) setActiveProjectIdState(prefs.activeProjectId);
     setWeekStartState(prefs.weekStartISO ? new Date(prefs.weekStartISO) : weekStartOf(new Date()));
     setShowDoneTicketsState(prefs.showDoneTickets ?? true);
+    setSidebarCollapsedState(prefs.sidebarCollapsed ?? false);
+    setTicketsCollapsedState(prefs.ticketsCollapsed ?? false);
     setHydrated(true);
     refresh().catch(() => {});
   }, [refresh]);
@@ -356,11 +376,17 @@ export default function AppShell() {
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      data-sidebar-collapsed={sidebarCollapsed ? '' : undefined}
+      data-tickets-collapsed={ticketsCollapsed ? '' : undefined}
+    >
       <Sidebar
         projects={projects}
         blocks={blocks}
         activeProjectId={activeProjectId}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={toggleSidebar}
         onSelectProject={(id) => setActiveProjectId(id)}
         onEditProject={(p) => setProjectEditing(p)}
         onDeleteProject={(p) => setConfirmDelete(p)}
@@ -371,6 +397,8 @@ export default function AppShell() {
         tickets={tickets}
         activeProject={activeProject}
         showDone={showDoneTickets}
+        collapsed={ticketsCollapsed}
+        onToggleCollapsed={toggleTickets}
         onToggleShowDone={setShowDoneTickets}
         onAddTicket={(title) => {
           if (!activeProjectId) {

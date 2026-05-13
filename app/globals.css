@@ -37,8 +37,7 @@ body {
   overflow: hidden;
 }
 .app-shell {
-  display: grid;
-  grid-template-columns: 244px 304px 1fr;
+  display: flex;
   height: 100vh;
   position: relative;
 }
@@ -75,10 +74,78 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
   display: flex; flex-direction: column;
   overflow: hidden;
   backdrop-filter: blur(20px);
+  width: 244px;
+  min-width: 244px;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#sidebar.collapsed {
+  width: 40px;
+  min-width: 40px;
 }
 .sidebar-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px 10px; }
-.sidebar-head h1 { font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.sidebar-head h1 { font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .sidebar-head button { padding: 2px 9px; font-size: 14px; line-height: 1; }
+
+.panel-collapse-btn {
+  opacity: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 0 3px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  position: relative;
+}
+.sidebar-head:hover .panel-collapse-btn,
+.tickets-head:hover .panel-collapse-btn { opacity: 1; }
+.panel-collapse-btn:hover { color: var(--text); }
+
+#sidebar.collapsed,
+#tickets.collapsed {
+  align-items: center;
+  justify-content: center;
+  padding-top: 14px;
+}
+.panel-expand-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px;
+  line-height: 1;
+  position: relative;
+}
+.panel-expand-btn:hover { color: var(--text); }
+
+/* CSS tooltips */
+.panel-collapse-btn::after,
+.panel-expand-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: #2a2b35;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+  z-index: 9999;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.panel-collapse-btn:hover::after,
+.panel-expand-btn:hover::after { opacity: 1; }
 #projectList { list-style: none; padding: 4px 8px; margin: 0; overflow-y: auto; flex: 1; }
 .project-item {
   display: grid;
@@ -234,12 +301,20 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
   display: flex; flex-direction: column;
   overflow: hidden;
   backdrop-filter: blur(20px);
+  width: 304px;
+  min-width: 304px;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#tickets.collapsed {
+  width: 40px;
+  min-width: 40px;
 }
 .tickets-head {
   display: flex; align-items: baseline; justify-content: space-between;
   padding: 18px 16px 8px;
 }
-.tickets-head h1 { font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.tickets-head h1 { font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 #ticketsProject {
   font-size: 11px;
   color: var(--text-2);
@@ -391,7 +466,7 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
 }
 
 /* --- Main / Topbar --- */
-#main { display: flex; flex-direction: column; overflow: hidden; }
+#main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 #topbar {
   display: flex; align-items: center; gap: 10px;
   padding: 12px 18px;
