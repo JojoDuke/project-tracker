@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { del, head, put } from '@vercel/blob';
+import { list, put } from '@vercel/blob';
 import type { AppState } from './types';
 
 const BLOB_KEY = 'store.json';
@@ -56,8 +56,10 @@ async function saveLocal(state: AppState): Promise<void> {
 
 async function loadBlob(): Promise<AppState> {
   try {
-    const meta = await head(BLOB_KEY);
-    const res = await fetch(meta.url, { cache: 'no-store' });
+    const { blobs } = await list({ prefix: BLOB_KEY });
+    const blob = blobs.find((b) => b.pathname === BLOB_KEY);
+    if (!blob) throw new Error('blob not found');
+    const res = await fetch(blob.url, { cache: 'no-store' });
     if (!res.ok) throw new Error('blob fetch failed');
     return (await res.json()) as AppState;
   } catch {
@@ -69,15 +71,11 @@ async function loadBlob(): Promise<AppState> {
 
 async function saveBlob(state: AppState): Promise<void> {
   writeQueue = writeQueue.then(async () => {
-    try {
-      await del(BLOB_KEY);
-    } catch {
-      /* ok if it doesn't exist yet */
-    }
     await put(BLOB_KEY, JSON.stringify(state, null, 2), {
       access: 'public',
       contentType: 'application/json',
-      addRandomSuffix: false
+      addRandomSuffix: false,
+      allowOverwrite: true
     });
   });
   await writeQueue;
