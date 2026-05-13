@@ -147,7 +147,8 @@ function ProjectItem({ project: p, isActive, lastTouched, onSelect, onEdit, onDe
     'project-item',
     'status-' + status,
     isActive ? 'active' : '',
-    isArchived ? 'dimmed' : ''
+    isArchived ? 'dimmed' : '',
+    menuOpen ? 'menu-open' : ''
   ]
     .filter(Boolean)
     .join(' ');

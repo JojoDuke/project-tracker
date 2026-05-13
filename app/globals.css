@@ -90,6 +90,7 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
   cursor: pointer;
   margin-bottom: 2px;
   position: relative;
+  position: relative;
   transition: background 0.12s ease;
 }
 .project-item:hover { background: var(--surface-2); }
@@ -152,6 +153,7 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
 .project-item.dimmed:hover { opacity: 0.85; }
 .project-item.dimmed .swatch { filter: grayscale(0.5); }
 .edit-menu { position: relative; flex-shrink: 0; }
+.project-item.menu-open { z-index: 10; }
 .project-item .edit {
   opacity: 0;
   border: none; background: transparent; color: var(--muted);
