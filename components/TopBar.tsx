@@ -98,8 +98,8 @@ export default function TopBar({
   const [cycles, setCycles] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const phaseStartedAt = useRef<Date | null>(null);
-  const intervalId = useRef<ReturnType<typeof setInterval> | null>(null);
   const hydrated = useRef(false);
+  const completeRef = useRef<() => void>(() => {});
 
   // hydrate settings client-side once
   useEffect(() => {
@@ -130,17 +130,9 @@ export default function TopBar({
     }
   }, [running, remaining, phase]);
 
-  const stop = useCallback(() => {
-    setRunning(false);
-    if (intervalId.current) {
-      clearInterval(intervalId.current);
-      intervalId.current = null;
-    }
-  }, []);
-
   const complete = useCallback(async () => {
     if (settings.sound) beep();
-    stop();
+    setRunning(false);
     if (phase === 'work') {
       const newCycles = cycles + 1;
       setCycles(newCycles);
@@ -161,54 +153,48 @@ export default function TopBar({
     if (settings.autoStart) {
       setTimeout(() => {
         if (settings.sound) beep();
-        start();
+        phaseStartedAt.current = new Date();
+        setRunning(true);
       }, 700);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, phase, cycles, stop, onWorkBlockLogged]);
+  }, [settings, phase, cycles, onWorkBlockLogged]);
 
-  const start = useCallback(() => {
-    setRunning((wasRunning) => {
-      if (wasRunning) return wasRunning;
-      phaseStartedAt.current = phaseStartedAt.current ?? new Date();
-      intervalId.current = setInterval(() => {
-        setRemaining((r) => {
-          if (r <= 1) {
-            if (intervalId.current) {
-              clearInterval(intervalId.current);
-              intervalId.current = null;
-            }
-            // schedule completion outside the setState
-            queueMicrotask(() => {
-              void complete();
-            });
-            return 0;
-          }
-          return r - 1;
-        });
-      }, 1000);
-      return true;
-    });
+  useEffect(() => {
+    completeRef.current = () => void complete();
   }, [complete]);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => {
+      setRemaining((r) => {
+        if (r <= 1) {
+          queueMicrotask(() => completeRef.current());
+          return 0;
+        }
+        return r - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [running]);
 
   const togglePlay = useCallback(() => {
     if (running) {
-      stop();
+      setRunning(false);
     } else {
       setRemaining((r) => (r <= 0 ? phaseDuration(phase) : r));
-      if (!intervalId.current) phaseStartedAt.current = new Date();
+      phaseStartedAt.current = phaseStartedAt.current ?? new Date();
       if (settings.sound) beep();
-      start();
+      setRunning(true);
     }
-  }, [running, phase, phaseDuration, settings.sound, start, stop]);
+  }, [running, phase, phaseDuration, settings.sound]);
 
   const reset = useCallback(() => {
-    stop();
+    setRunning(false);
     setPhase('work');
     setCycles(0);
     phaseStartedAt.current = null;
     setRemaining(phaseDuration('work'));
-  }, [phaseDuration, stop]);
+  }, [phaseDuration]);
 
   // keyboard: p toggles
   useEffect(() => {
@@ -224,11 +210,6 @@ export default function TopBar({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [togglePlay]);
-
-  // cleanup
-  useEffect(() => () => {
-    if (intervalId.current) clearInterval(intervalId.current);
-  }, []);
 
   const we = addDays(weekStart, 6);
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
