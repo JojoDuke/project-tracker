@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Project, ProjectStatus, TimeBlock } from '@/lib/types';
 import { daysSince, relTime } from '@/lib/time';
 
@@ -22,6 +22,7 @@ interface Props {
   activeProjectId: string | null;
   onSelectProject: (id: string) => void;
   onEditProject: (p: Project) => void;
+  onDeleteProject: (p: Project) => void;
   onNewProject: () => void;
   onQuickLog: () => void;
 }
@@ -32,6 +33,7 @@ export default function Sidebar({
   activeProjectId,
   onSelectProject,
   onEditProject,
+  onDeleteProject,
   onNewProject,
   onQuickLog
 }: Props) {
@@ -79,6 +81,7 @@ export default function Sidebar({
             lastTouched={lastTouched.get(p.id) ?? null}
             onSelect={() => onSelectProject(p.id)}
             onEdit={() => onEditProject(p)}
+            onDelete={() => onDeleteProject(p)}
           />
         ))}
       </ul>
@@ -106,6 +109,7 @@ export default function Sidebar({
                 lastTouched={lastTouched.get(p.id) ?? null}
                 onSelect={() => onSelectProject(p.id)}
                 onEdit={() => onEditProject(p)}
+                onDelete={() => onDeleteProject(p)}
               />
             ))}
           </ul>
@@ -129,9 +133,10 @@ interface ItemProps {
   lastTouched: string | null;
   onSelect: () => void;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-function ProjectItem({ project: p, isActive, lastTouched, onSelect, onEdit }: ItemProps) {
+function ProjectItem({ project: p, isActive, lastTouched, onSelect, onEdit, onDelete }: ItemProps) {
   const status = projectStatus(p);
   const isArchived = status === 'inactive' || status === 'done';
   const days = daysSince(lastTouched);
@@ -147,11 +152,25 @@ function ProjectItem({ project: p, isActive, lastTouched, onSelect, onEdit }: It
     .filter(Boolean)
     .join(' ');
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
   return (
     <li
       className={cls}
       onClick={(e) => {
-        if ((e.target as HTMLElement).closest('.edit')) return;
+        if ((e.target as HTMLElement).closest('.edit-menu')) return;
         onSelect();
       }}
     >
@@ -167,16 +186,41 @@ function ProjectItem({ project: p, isActive, lastTouched, onSelect, onEdit }: It
           {relTime(lastTouched)}
         </span>
       </span>
-      <button
-        className="edit"
-        title="Edit project"
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit();
-        }}
-      >
-        ⋯
-      </button>
+      <div className="edit-menu" ref={menuRef}>
+        <button
+          className="edit"
+          title="Project options"
+          onClick={(e) => {
+            e.stopPropagation();
+            setMenuOpen((v) => !v);
+          }}
+        >
+          ⋯
+        </button>
+        {menuOpen && (
+          <div className="edit-dropdown">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(false);
+                onEdit();
+              }}
+            >
+              Edit
+            </button>
+            <button
+              className="danger"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(false);
+                onDelete();
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
     </li>
   );
 }

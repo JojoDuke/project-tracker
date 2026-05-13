@@ -151,6 +151,7 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
 .project-item.dimmed { opacity: 0.55; }
 .project-item.dimmed:hover { opacity: 0.85; }
 .project-item.dimmed .swatch { filter: grayscale(0.5); }
+.edit-menu { position: relative; flex-shrink: 0; }
 .project-item .edit {
   opacity: 0;
   border: none; background: transparent; color: var(--muted);
@@ -159,6 +160,33 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
 }
 .project-item:hover .edit { opacity: 1; }
 .project-item .edit:hover { color: var(--text); background: var(--surface-3); }
+.edit-dropdown {
+  position: absolute;
+  right: 0; top: calc(100% + 2px);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 100;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.edit-dropdown button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.edit-dropdown button:hover { background: var(--surface-3); }
+.edit-dropdown button.danger { color: #e05c5c; }
+.edit-dropdown button.danger:hover { background: rgba(224, 92, 92, 0.12); }
 
 .archived-section { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 4px; }
 .archived-toggle {
@@ -663,6 +691,16 @@ dialog menu .spacer { flex: 1; }
 dialog menu button { padding: 7px 14px; }
 
 .field-group { display: flex; flex-direction: column; gap: 7px; }
+
+.confirm-dialog { width: 380px; padding: 28px 28px 20px; }
+.confirm-dialog h2 { font-size: 17px; margin-bottom: 10px; }
+.confirm-message { font-size: 13px; color: var(--muted); line-height: 1.55; margin: 0 0 4px; }
+.danger-btn {
+  background: #c0392b !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+.danger-btn:hover { background: #a93226 !important; }
 .field-label {
   font-size: 11px;
   color: var(--muted);

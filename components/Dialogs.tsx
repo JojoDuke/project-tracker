@@ -9,7 +9,10 @@ import type { PomoSettings } from './TopBar';
 // =======================================================================
 // useNativeDialog: small helper to drive a <dialog> element imperatively.
 // =======================================================================
-function useNativeDialog(open: boolean): React.RefObject<HTMLDialogElement | null> {
+function useNativeDialog(
+  open: boolean,
+  onClose?: () => void
+): React.RefObject<HTMLDialogElement | null> {
   const ref = useRef<HTMLDialogElement | null>(null);
   useEffect(() => {
     const d = ref.current;
@@ -17,6 +20,15 @@ function useNativeDialog(open: boolean): React.RefObject<HTMLDialogElement | nul
     if (open && !d.open) d.showModal();
     if (!open && d.open) d.close();
   }, [open]);
+  useEffect(() => {
+    const d = ref.current;
+    if (!d || !onClose) return;
+    const handler = (e: MouseEvent) => {
+      if (e.target === d) onClose();
+    };
+    d.addEventListener('click', handler);
+    return () => d.removeEventListener('click', handler);
+  }, [onClose]);
   return ref;
 }
 
@@ -33,7 +45,7 @@ interface BlockDialogProps {
 
 export function BlockDialog({ block, projects, onClose, onSave, onDelete }: BlockDialogProps) {
   const open = !!block;
-  const ref = useNativeDialog(open);
+  const ref = useNativeDialog(open, onClose);
   const [projectId, setProjectId] = useState('');
   const [note, setNote] = useState('');
   const [start, setStart] = useState('');
@@ -149,7 +161,7 @@ interface ProjectDialogProps {
 
 export function ProjectDialog({ target, onClose, onSave, onDelete }: ProjectDialogProps) {
   const open = target !== undefined;
-  const ref = useNativeDialog(open);
+  const ref = useNativeDialog(open, onClose);
   const isEdit = !!target;
   const [name, setName] = useState('');
   const [color, setColor] = useState('#6aa9ff');
@@ -272,10 +284,10 @@ export function ProjectDialog({ target, onClose, onSave, onDelete }: ProjectDial
             ))}
           </div>
         </div>
-        <label>
-          Color
+        <div className="field-group">
+          <span className="field-label">Color</span>
           <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-        </label>
+        </div>
         <menu>
           {isEdit && (
             <button value="delete" type="submit" className="danger" formNoValidate>
@@ -308,7 +320,7 @@ interface TicketDialogProps {
 
 export function TicketDialog({ ticket, project, onClose, onSave, onDelete }: TicketDialogProps) {
   const open = !!ticket;
-  const ref = useNativeDialog(open);
+  const ref = useNativeDialog(open, onClose);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [done, setDone] = useState(false);
@@ -411,7 +423,7 @@ interface QuickLogDialogProps {
 }
 
 export function QuickLogDialog({ open, projects, defaultProjectId, onClose, onLog }: QuickLogDialogProps) {
-  const ref = useNativeDialog(open);
+  const ref = useNativeDialog(open, onClose);
   const [projectId, setProjectId] = useState('');
   const [duration, setDuration] = useState(60);
   const [ending, setEnding] = useState<string>('now');
@@ -514,7 +526,7 @@ interface PomoSettingsDialogProps {
 }
 
 export function PomoSettingsDialog({ open, settings, onClose, onSave }: PomoSettingsDialogProps) {
-  const ref = useNativeDialog(open);
+  const ref = useNativeDialog(open, onClose);
   const [work, setWork] = useState(settings.work);
   const [rest, setRest] = useState(settings.rest);
   const [longRest, setLongRest] = useState(settings.longRest);
@@ -643,6 +655,53 @@ export function PomoSettingsDialog({ open, settings, onClose, onSave }: PomoSett
           </button>
         </menu>
       </form>
+    </dialog>
+  );
+}
+
+// =======================================================================
+// ConfirmDialog
+// =======================================================================
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel = 'Delete',
+  onConfirm,
+  onCancel
+}: ConfirmDialogProps) {
+  const ref = useNativeDialog(open, onCancel);
+
+  return (
+    <dialog
+      ref={ref}
+      className="confirm-dialog"
+      onClose={onCancel}
+      onCancel={(e) => {
+        e.preventDefault();
+        onCancel();
+      }}
+    >
+      <h2>{title}</h2>
+      <p className="confirm-message">{message}</p>
+      <menu>
+        <span className="spacer" />
+        <button type="button" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="button" className="danger-btn" onClick={onConfirm}>
+          {confirmLabel}
+        </button>
+      </menu>
     </dialog>
   );
 }

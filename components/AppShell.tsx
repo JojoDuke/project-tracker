@@ -10,6 +10,7 @@ import TopBar from './TopBar';
 import WeekGrid from './WeekGrid';
 import {
   BlockDialog,
+  ConfirmDialog,
   ProjectDialog,
   QuickLogDialog,
   TicketDialog
@@ -53,6 +54,7 @@ export default function AppShell() {
   const [projectEditing, setProjectEditing] = useState<Project | null | undefined>(undefined); // undefined=closed, null=new
   const [ticketEditing, setTicketEditing] = useState<Ticket | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
 
   const setActiveProjectId = useCallback((id: string | null) => {
     setActiveProjectIdState(id);
@@ -253,6 +255,7 @@ export default function AppShell() {
         activeProjectId={activeProjectId}
         onSelectProject={(id) => setActiveProjectId(id)}
         onEditProject={(p) => setProjectEditing(p)}
+        onDeleteProject={(p) => setConfirmDelete(p)}
         onNewProject={() => setProjectEditing(null)}
         onQuickLog={() => setQuickOpen(true)}
       />
@@ -334,6 +337,18 @@ export default function AppShell() {
         defaultProjectId={activeProjectId}
         onClose={() => setQuickOpen(false)}
         onLog={quickLog}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete project?"
+        message={confirmDelete ? `"${confirmDelete.name}" and all its time blocks will be permanently deleted.` : ''}
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (confirmDelete) await deleteProject(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+        onCancel={() => setConfirmDelete(null)}
       />
     </div>
   );
