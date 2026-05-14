@@ -835,3 +835,174 @@ dialog menu button { padding: 7px 14px; }
 
 /* Selection */
 ::selection { background: var(--accent-soft); color: var(--text); }
+
+/* --- Mobile nav bar (hidden on desktop) --- */
+.mobile-nav { display: none; }
+.mobile-backdrop { display: none; }
+
+/* --- Mobile (≤ 768px) --- */
+@media (max-width: 768px) {
+  body { overflow: hidden; }
+
+  .app-shell {
+    flex-direction: column;
+    height: 100dvh;
+  }
+
+  /* Sidebar becomes a slide-over drawer from the left */
+  #sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 56px;
+    width: 300px !important;
+    min-width: 300px !important;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0s, min-width 0s;
+    border-right: 1px solid var(--border-strong);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+  .app-shell.mobile-sidebar-open #sidebar {
+    transform: translateX(0);
+  }
+
+  /* Tickets becomes a slide-over drawer from the right */
+  #tickets {
+    position: fixed !important;
+    top: 0;
+    right: 0;
+    bottom: 56px;
+    width: 300px !important;
+    min-width: 300px !important;
+    z-index: 200;
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0s, min-width 0s;
+    border-left: 1px solid var(--border-strong);
+    border-right: none;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+  .app-shell.mobile-tickets-open #tickets {
+    transform: translateX(0);
+  }
+
+  /* Main fills full height minus the bottom nav */
+  #main {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Backdrop dims content behind open drawers */
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    bottom: 56px;
+    background: rgba(0, 0, 0, 0);
+    z-index: 199;
+    pointer-events: none;
+    transition: background 0.25s ease;
+  }
+  .app-shell.mobile-sidebar-open .mobile-backdrop,
+  .app-shell.mobile-tickets-open .mobile-backdrop {
+    background: rgba(0, 0, 0, 0.55);
+    pointer-events: auto;
+    backdrop-filter: blur(3px);
+  }
+
+  /* Bottom navigation bar */
+  .mobile-nav {
+    display: flex;
+    height: 56px;
+    flex-shrink: 0;
+    background: var(--surface-1);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    z-index: 201;
+  }
+  .mobile-nav button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    font-weight: 500;
+    padding: 6px 4px 8px;
+    transition: color 0.15s ease;
+  }
+  .mobile-nav button:hover { background: transparent; border-color: transparent; }
+  .mobile-nav button:active { transform: none; }
+  .mobile-nav button.active { color: var(--accent); }
+  .mobile-nav .nav-icon {
+    font-size: 18px;
+    line-height: 1;
+    display: block;
+  }
+
+  /* TopBar: wrap to two rows */
+  #topbar {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    padding: 8px 12px;
+    min-height: auto;
+  }
+  #topbar .spacer { display: none; }
+  #weekLabel { flex: 1; font-size: 12px; margin-left: 2px; }
+  #activeProjectLabel {
+    order: -1;
+    width: 100%;
+    font-size: 12px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+  .pomo-phase { display: none; }
+  #pomoCycles { display: none; }
+  #pomodoro { padding: 4px 4px 4px 10px; gap: 6px; }
+  #pomoTime { font-size: 14px; min-width: 46px; }
+  #pomodoro button { padding: 3px 7px; font-size: 12px; }
+
+  /* Grid: wider columns so 7 days scroll nicely */
+  .grid-inner {
+    grid-template-columns: 48px repeat(7, minmax(110px, 1fr));
+    min-width: unset;
+  }
+  .grid-header { padding: 8px 4px; }
+  .grid-header .dom { font-size: 14px; }
+  .hour-label { font-size: 9px; padding: 3px 4px 0 0; }
+
+  /* Block delete button always visible on touch */
+  .block-delete { opacity: 0.85; width: 22px; height: 22px; font-size: 15px; }
+
+  /* Dialogs: full width */
+  dialog {
+    min-width: unset;
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    padding: 18px 16px;
+    border-radius: 12px;
+  }
+
+  /* Hide keyboard shortcut hint on mobile */
+  .hint { display: none; }
+
+  /* Larger tap targets for project items */
+  .project-item { padding: 12px 10px; }
+  .project-item .edit { opacity: 1; }
+
+  /* Ticket list padding */
+  #ticketList { padding: 2px 10px 80px; }
+  #newTicketForm { padding: 6px 10px; }
+}

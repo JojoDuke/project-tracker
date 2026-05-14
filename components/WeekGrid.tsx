@@ -49,6 +49,7 @@ export default function WeekGrid({
   const [nowTick, setNowTick] = useState(0);
   const dragRef = useRef<DragState | null>(null);
   const colRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNowTick((n) => n + 1), 60000);
@@ -59,37 +60,66 @@ export default function WeekGrid({
     dragRef.current = drag;
   }, [drag]);
 
+  // Auto-scroll to show today when it's in the current week
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const todayIndex = Array.from({ length: 7 }).findIndex((_, i) =>
+      sameDay(addDays(weekStart, i), new Date())
+    );
+    if (todayIndex < 0) return;
+    const col = colRefs.current[todayIndex];
+    if (!col) return;
+    const scrollTarget = col.offsetLeft - grid.clientWidth / 2 + col.offsetWidth / 2;
+    grid.scrollLeft = Math.max(0, scrollTarget);
+  }, [weekStart]);
+
   useEffect(() => {
     if (!drag) return;
-    const onMove = (e: MouseEvent) => {
+
+    const handleMove = (clientY: number) => {
       const d = dragRef.current;
       if (!d) return;
       const col = colRefs.current[d.dayIndex];
       if (!col) return;
       const rect = col.getBoundingClientRect();
-      const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+      const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
       const day = addDays(weekStart, d.dayIndex);
       const { start, end } = yToTimes(day, d.originY, y);
       setDrag({ ...d, currentY: y, ghostStart: start, ghostEnd: end });
     };
-    const onUp = async (e: MouseEvent) => {
+
+    const handleUp = async (clientY: number) => {
       const d = dragRef.current;
       if (!d) return;
       const col = colRefs.current[d.dayIndex];
       setDrag(null);
       if (!col) return;
       const rect = col.getBoundingClientRect();
-      const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+      const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
       const day = addDays(weekStart, d.dayIndex);
       const { start, end } = yToTimes(day, d.originY, y);
       if (end.getTime() - start.getTime() < 60000 * SLOT_MIN) return;
       await onCreateBlock(start, end);
     };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+
+    const onMouseMove = (e: MouseEvent) => handleMove(e.clientY);
+    const onMouseUp = (e: MouseEvent) => handleUp(e.clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      handleMove(e.touches[0].clientY);
+    };
+    const onTouchEnd = (e: TouchEvent) => handleUp(e.changedTouches[0].clientY);
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
     return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
     };
   }, [drag, weekStart, onCreateBlock]);
 
@@ -97,7 +127,7 @@ export default function WeekGrid({
   void nowTick;
 
   return (
-    <div id="grid">
+    <div id="grid" ref={gridRef}>
       <div className="grid-inner" style={{ gridTemplateRows: `auto ${colHeight}px` }}>
         <div className="grid-corner" />
         {Array.from({ length: 7 }).map((_, i) => {
@@ -168,6 +198,18 @@ export default function WeekGrid({
                 if (target.closest('.block')) return;
                 const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
                 const y = e.clientY - rect.top;
+                const day = addDays(weekStart, i);
+                const { start, end } = yToTimes(day, y, y);
+                setDrag({ dayIndex: i, originY: y, currentY: y, ghostStart: start, ghostEnd: end });
+                e.preventDefault();
+              }}
+              onTouchStart={(e) => {
+                if (!activeProjectId) return;
+                const target = e.target as HTMLElement;
+                if (target.closest('.block')) return;
+                const touch = e.touches[0];
+                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                const y = touch.clientY - rect.top;
                 const day = addDays(weekStart, i);
                 const { start, end } = yToTimes(day, y, y);
                 setDrag({ dayIndex: i, originY: y, currentY: y, ghostStart: start, ghostEnd: end });

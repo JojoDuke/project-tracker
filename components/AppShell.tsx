@@ -59,6 +59,8 @@ export default function AppShell() {
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
   const [sidebarCollapsed, setSidebarCollapsedState] = useState(false);
   const [ticketsCollapsed, setTicketsCollapsedState] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileDrawer, setMobileDrawer] = useState<'none' | 'sidebar' | 'tickets'>('none');
 
   const setActiveProjectId = useCallback((id: string | null) => {
     setActiveProjectIdState(id);
@@ -121,6 +123,18 @@ export default function AppShell() {
     if (!hydrated) return;
     saveUiPrefs({ activeProjectId });
   }, [activeProjectId, hydrated]);
+
+  // Mobile detection
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+      if (!e.matches) setMobileDrawer('none');
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -375,9 +389,15 @@ export default function AppShell() {
     return <div className="app-shell" />;
   }
 
+  const shellClass = [
+    'app-shell',
+    mobileDrawer === 'sidebar' ? 'mobile-sidebar-open' : '',
+    mobileDrawer === 'tickets' ? 'mobile-tickets-open' : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className="app-shell"
+      className={shellClass}
       data-sidebar-collapsed={sidebarCollapsed ? '' : undefined}
       data-tickets-collapsed={ticketsCollapsed ? '' : undefined}
     >
@@ -385,19 +405,19 @@ export default function AppShell() {
         projects={projects}
         blocks={blocks}
         activeProjectId={activeProjectId}
-        collapsed={sidebarCollapsed}
+        collapsed={isMobile ? false : sidebarCollapsed}
         onToggleCollapsed={toggleSidebar}
-        onSelectProject={(id) => setActiveProjectId(id)}
-        onEditProject={(p) => setProjectEditing(p)}
+        onSelectProject={(id) => { setActiveProjectId(id); if (isMobile) setMobileDrawer('none'); }}
+        onEditProject={(p) => { setProjectEditing(p); if (isMobile) setMobileDrawer('none'); }}
         onDeleteProject={(p) => setConfirmDelete(p)}
-        onNewProject={() => setProjectEditing(null)}
-        onQuickLog={() => setQuickOpen(true)}
+        onNewProject={() => { setProjectEditing(null); if (isMobile) setMobileDrawer('none'); }}
+        onQuickLog={() => { setQuickOpen(true); if (isMobile) setMobileDrawer('none'); }}
       />
       <TicketsPanel
         tickets={tickets}
         activeProject={activeProject}
         showDone={showDoneTickets}
-        collapsed={ticketsCollapsed}
+        collapsed={isMobile ? false : ticketsCollapsed}
         onToggleCollapsed={toggleTickets}
         onToggleShowDone={setShowDoneTickets}
         onAddTicket={(title) => {
@@ -407,7 +427,7 @@ export default function AppShell() {
           }
           return addTicket(activeProjectId, title);
         }}
-        onOpenTicket={(t) => setTicketEditing(t)}
+        onOpenTicket={(t) => { setTicketEditing(t); if (isMobile) setMobileDrawer('none'); }}
         onUpdateTicket={updateTicket}
       />
       <main id="main">
@@ -487,6 +507,34 @@ export default function AppShell() {
         }}
         onCancel={() => setConfirmDelete(null)}
       />
+
+      {/* Mobile: backdrop closes drawers on tap */}
+      <div className="mobile-backdrop" onClick={() => setMobileDrawer('none')} />
+
+      {/* Mobile: bottom navigation bar */}
+      <nav className="mobile-nav">
+        <button
+          className={mobileDrawer === 'sidebar' ? 'active' : ''}
+          onClick={() => setMobileDrawer(mobileDrawer === 'sidebar' ? 'none' : 'sidebar')}
+        >
+          <span className="nav-icon">◫</span>
+          Projects
+        </button>
+        <button
+          className={mobileDrawer === 'none' ? 'active' : ''}
+          onClick={() => setMobileDrawer('none')}
+        >
+          <span className="nav-icon">⊞</span>
+          Calendar
+        </button>
+        <button
+          className={mobileDrawer === 'tickets' ? 'active' : ''}
+          onClick={() => setMobileDrawer(mobileDrawer === 'tickets' ? 'none' : 'tickets')}
+        >
+          <span className="nav-icon">☑</span>
+          Tickets
+        </button>
+      </nav>
     </div>
   );
 }
