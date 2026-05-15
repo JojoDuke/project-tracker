@@ -654,12 +654,25 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
   padding: 5px 8px;
   font-size: 11px;
   overflow: hidden;
-  cursor: pointer;
+  cursor: grab;
   color: #fff; /* overridden inline based on bg luminance */
   z-index: 2;
   background: var(--block-color, var(--accent));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease;
+  transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease, opacity 0.12s ease;
+}
+.block-moving {
+  opacity: 0.3 !important;
+  cursor: grabbing;
+  pointer-events: none;
+  filter: grayscale(0.2);
+}
+.block.move-ghost {
+  opacity: 0.88;
+  outline: 2px dashed rgba(255, 255, 255, 0.55);
+  outline-offset: -2px;
+  cursor: grabbing;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 .block .b-title { font-weight: 600; font-size: 11px; letter-spacing: -0.005em; }
 .block .b-note { opacity: 0.88; font-weight: 400; font-size: 10.5px; margin-top: 1px; }

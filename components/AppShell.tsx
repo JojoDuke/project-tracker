@@ -454,6 +454,7 @@ export default function AppShell() {
           }}
           onOpenBlock={(b) => setBlockEditing(b)}
           onDeleteBlock={deleteBlock}
+          onMoveBlock={(id, start, end) => updateBlock(id, { start, end })}
         />
       </main>
 
