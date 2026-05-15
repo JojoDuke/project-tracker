@@ -56,7 +56,19 @@ type MoveDrag = {
   hasMoved: boolean;
 };
 
-type DragState = CreateDrag | MoveDrag;
+type ResizeDrag = {
+  kind: 'resize';
+  block: TimeBlock;
+  edge: 'top' | 'bottom';
+  /** the end that stays fixed while the other is dragged */
+  anchorTime: Date;
+  dayIndex: number;
+  ghostStart: Date;
+  ghostEnd: Date;
+  hasMoved: boolean;
+};
+
+type DragState = CreateDrag | MoveDrag | ResizeDrag;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -71,6 +83,40 @@ function getDayIndexAtX(
     if (clientX >= rect.left && clientX <= rect.right) return i;
   }
   return -1;
+}
+
+function computeResizeTimes(
+  colRefs: React.MutableRefObject<Array<HTMLDivElement | null>>,
+  weekStart: Date,
+  dayIndex: number,
+  clientY: number,
+  edge: 'top' | 'bottom',
+  anchorTime: Date,
+  colHeight: number
+): { start: Date; end: Date } {
+  const col = colRefs.current[dayIndex];
+  if (!col) return { start: anchorTime, end: anchorTime };
+  const rect = col.getBoundingClientRect();
+  const y = Math.max(0, Math.min(colHeight, clientY - rect.top));
+  const day = addDays(weekStart, dayIndex);
+  const dayBase = new Date(day);
+  dayBase.setHours(DAY_START, 0, 0, 0);
+  const mins = Math.round((y / HOUR_H) * 60 / SLOT_MIN) * SLOT_MIN;
+  const snapped = new Date(dayBase.getTime() + mins * 60000);
+  const minGap = SLOT_MIN * 60000;
+  if (edge === 'bottom') {
+    const start = anchorTime;
+    const end = snapped.getTime() > anchorTime.getTime() + minGap
+      ? snapped
+      : new Date(anchorTime.getTime() + minGap);
+    return { start, end };
+  } else {
+    const end = anchorTime;
+    const start = snapped.getTime() < anchorTime.getTime() - minGap
+      ? snapped
+      : new Date(anchorTime.getTime() - minGap);
+    return { start, end };
+  }
 }
 
 function computeMovedTimes(
@@ -156,7 +202,7 @@ export default function WeekGrid({
         const day = addDays(weekStart, d.dayIndex);
         const { start, end } = yToTimes(day, d.originY, y);
         setDrag({ ...d, currentY: y, ghostStart: start, ghostEnd: end });
-      } else {
+      } else if (d.kind === 'move') {
         const distX = Math.abs(clientX - d.originClientX);
         const distY = Math.abs(clientY - d.originClientY);
         const hasMoved = d.hasMoved || distX > 4 || distY > 4;
@@ -166,6 +212,11 @@ export default function WeekGrid({
           colRefs, weekStart, dayIndex, clientY, d.clickOffsetY, d.duration
         );
         setDrag({ ...d, dayIndex, ghostStart: start, ghostEnd: end, hasMoved });
+      } else {
+        const { start, end } = computeResizeTimes(
+          colRefs, weekStart, d.dayIndex, clientY, d.edge, d.anchorTime, colHeight
+        );
+        setDrag({ ...d, ghostStart: start, ghostEnd: end, hasMoved: true });
       }
     };
 
@@ -183,9 +234,9 @@ export default function WeekGrid({
         const { start, end } = yToTimes(day, d.originY, y);
         if (end.getTime() - start.getTime() < 60000 * SLOT_MIN) return;
         await onCreateBlock(start, end);
-      } else {
+      } else if (d.kind === 'move') {
         if (!d.hasMoved) {
-          // mousedown called preventDefault, so no click event fires — handle it here
+          // mousedown called preventDefault so no click event fires — handle it here
           onOpenBlock(d.block);
           return;
         }
@@ -195,6 +246,9 @@ export default function WeekGrid({
           colRefs, weekStart, dayIndex, clientY, d.clickOffsetY, d.duration
         );
         await onMoveBlock(d.block.id, start.toISOString(), end.toISOString());
+      } else {
+        if (!d.hasMoved) return;
+        await onMoveBlock(d.block.id, d.ghostStart.toISOString(), d.ghostEnd.toISOString());
       }
     };
 
@@ -266,6 +320,7 @@ export default function WeekGrid({
 
           const createGhost = drag?.kind === 'create' && drag.dayIndex === i ? drag : null;
           const moveGhost   = drag?.kind === 'move'   && drag.dayIndex === i && drag.hasMoved ? drag : null;
+          const resizeGhost = drag?.kind === 'resize' && drag.dayIndex === i && drag.hasMoved ? drag : null;
 
           return (
             <div
@@ -309,12 +364,14 @@ export default function WeekGrid({
                 const bottom = Math.min(colHeight, ((be.getTime() - dayStart.getTime()) / 3600000) * HOUR_H);
                 const dur = durationLabel(be.getTime() - bs.getTime());
                 const textColor = contrastColor(project.color);
-                const isBeingMoved = drag?.kind === 'move' && drag.block.id === b.id;
+                const isBeingMoved   = drag?.kind === 'move'   && drag.block.id === b.id;
+                const isBeingResized = drag?.kind === 'resize' && drag.block.id === b.id;
+                const isGhosted = isBeingMoved || isBeingResized;
 
                 return (
                   <div
                     key={b.id}
-                    className={'block' + (isBeingMoved ? ' block-moving' : '')}
+                    className={'block' + (isGhosted ? ' block-moving' : '')}
                     style={{
                       top: top + 'px',
                       height: Math.max(SLOT_H - 2, bottom - top) + 'px',
@@ -358,6 +415,52 @@ export default function WeekGrid({
                       });
                     }}
                   >
+                    {/* Resize handle — top edge (moves start, end fixed) */}
+                    <div
+                      className="block-resize-handle top"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setDrag({
+                          kind: 'resize', block: b, edge: 'top',
+                          anchorTime: be, dayIndex: i,
+                          ghostStart: bs, ghostEnd: be, hasMoved: false,
+                        });
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setDrag({
+                          kind: 'resize', block: b, edge: 'top',
+                          anchorTime: be, dayIndex: i,
+                          ghostStart: bs, ghostEnd: be, hasMoved: false,
+                        });
+                      }}
+                    />
+
+                    {/* Resize handle — bottom edge (moves end, start fixed) */}
+                    <div
+                      className="block-resize-handle bottom"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setDrag({
+                          kind: 'resize', block: b, edge: 'bottom',
+                          anchorTime: bs, dayIndex: i,
+                          ghostStart: bs, ghostEnd: be, hasMoved: false,
+                        });
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setDrag({
+                          kind: 'resize', block: b, edge: 'bottom',
+                          anchorTime: bs, dayIndex: i,
+                          ghostStart: bs, ghostEnd: be, hasMoved: false,
+                        });
+                      }}
+                    />
+
                     <button
                       className="block-delete"
                       title="Delete block"
@@ -395,6 +498,29 @@ export default function WeekGrid({
                     }}
                   >
                     <div className="b-title">New · {dur}</div>
+                  </div>
+                );
+              })()}
+
+              {/* Ghost for resize-drag */}
+              {resizeGhost && (() => {
+                const ds     = dayStartOf(addDays(weekStart, i));
+                const startY = ((resizeGhost.ghostStart.getTime() - ds.getTime()) / 3600000) * HOUR_H;
+                const endY   = ((resizeGhost.ghostEnd.getTime()   - ds.getTime()) / 3600000) * HOUR_H;
+                const proj   = projects.find((p) => p.id === resizeGhost.block.projectId);
+                const dur    = durationLabel(resizeGhost.ghostEnd.getTime() - resizeGhost.ghostStart.getTime());
+                const tc     = proj ? contrastColor(proj.color) : '#fff';
+                return (
+                  <div
+                    className="block ghost move-ghost"
+                    style={{
+                      top: startY + 'px',
+                      height: Math.max(SLOT_H, endY - startY) + 'px',
+                      background: proj?.color || '#666',
+                      color: tc,
+                    }}
+                  >
+                    <div className="b-title">{proj?.name ?? ''} · {dur}</div>
                   </div>
                 );
               })()}
