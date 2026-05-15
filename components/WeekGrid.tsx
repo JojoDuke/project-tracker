@@ -116,8 +116,6 @@ export default function WeekGrid({
   const dragRef = useRef<DragState | null>(null);
   const colRefs = useRef<Array<HTMLDivElement | null>>([]);
   const gridRef = useRef<HTMLDivElement>(null);
-  /** set to true when a block is released after a real move, to suppress the onClick */
-  const didMoveDragRef = useRef(false);
 
   useEffect(() => {
     const id = setInterval(() => setNowTick((n) => n + 1), 60000);
@@ -186,13 +184,16 @@ export default function WeekGrid({
         if (end.getTime() - start.getTime() < 60000 * SLOT_MIN) return;
         await onCreateBlock(start, end);
       } else {
-        if (!d.hasMoved) return; // click — let onClick handle it
+        if (!d.hasMoved) {
+          // mousedown called preventDefault, so no click event fires — handle it here
+          onOpenBlock(d.block);
+          return;
+        }
         const targetDay = getDayIndexAtX(colRefs, clientX);
         const dayIndex = targetDay >= 0 ? targetDay : d.dayIndex;
         const { start, end } = computeMovedTimes(
           colRefs, weekStart, dayIndex, clientY, d.clickOffsetY, d.duration
         );
-        didMoveDragRef.current = true;
         await onMoveBlock(d.block.id, start.toISOString(), end.toISOString());
       }
     };
@@ -319,11 +320,6 @@ export default function WeekGrid({
                       height: Math.max(SLOT_H - 2, bottom - top) + 'px',
                       background: project.color,
                       color: textColor,
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (didMoveDragRef.current) { didMoveDragRef.current = false; return; }
-                      onOpenBlock(b);
                     }}
                     onMouseDown={(e) => {
                       if (e.button !== 0) return;
