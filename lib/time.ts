@@ -99,3 +99,14 @@ export function pickColor(i: number): string {
   const palette = ['#6aa9ff', '#ff8a5b', '#7ed957', '#c084fc', '#f5c542', '#ff6b9d', '#4ecdc4', '#ffa07a'];
   return palette[i % palette.length];
 }
+
+/** Returns '#000' or '#fff' — whichever has better contrast against the given hex background. */
+export function contrastColor(hex: string): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const lum = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+  return lum > 0.179 ? '#1a1a1a' : '#ffffff';
+}

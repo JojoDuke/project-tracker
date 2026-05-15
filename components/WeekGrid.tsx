@@ -9,6 +9,7 @@ import {
   SLOT_H,
   SLOT_MIN,
   addDays,
+  contrastColor,
   dayStartOf,
   durationLabel,
   fmtHour,
@@ -233,17 +234,27 @@ export default function WeekGrid({
                     style={{
                       top: top + 'px',
                       height: Math.max(SLOT_H - 2, bottom - top) + 'px',
-                      background: project.color
+                      background: project.color,
+                      color: contrastColor(project.color)
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
                       onOpenBlock(b);
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                   >
                     <button
                       className="block-delete"
                       title="Delete block"
+                      style={{
+                        background: contrastColor(project.color) === '#1a1a1a'
+                          ? 'rgba(0,0,0,0.18)'
+                          : 'rgba(0,0,0,0.40)',
+                        color: contrastColor(project.color) === '#1a1a1a'
+                          ? 'rgba(0,0,0,0.75)'
+                          : 'rgba(255,255,255,0.95)'
+                      }}
                       onClick={async (e) => {
                         e.stopPropagation();
                         await onDeleteBlock(b.id);

@@ -655,7 +655,7 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
   font-size: 11px;
   overflow: hidden;
   cursor: pointer;
-  color: #fff;
+  color: #fff; /* overridden inline based on bg luminance */
   z-index: 2;
   background: var(--block-color, var(--accent));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
