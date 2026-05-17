@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { saveState } from '@/lib/storage';
+import { replaceAllData } from '@/lib/storage';
 import type { AppState } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     tickets: Array.isArray(body.tickets) ? body.tickets : [],
     blocks: Array.isArray(body.blocks) ? body.blocks : []
   };
-  await saveState(state);
+  await replaceAllData(state);
   return NextResponse.json({ ok: true, counts: {
     projects: state.projects.length,
     tickets: state.tickets.length,

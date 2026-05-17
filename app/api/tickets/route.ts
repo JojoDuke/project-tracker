@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
-import { mutate } from '@/lib/storage';
+import { dbCreateTicket } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,29 +11,31 @@ export async function POST(req: Request) {
   if (!projectId || !title) {
     return NextResponse.json({ error: 'projectId and title required' }, { status: 400 });
   }
-  let created;
-  let badProject = false;
-  await mutate((state) => {
-    if (!state.projects.find((p) => p.id === projectId)) {
-      badProject = true;
-      return;
-    }
-    const projectTickets = state.tickets.filter((t) => t.projectId === projectId);
-    const number = projectTickets.reduce((m, t) => Math.max(m, t.number || 0), 0) + 1;
-    const maxOrder = projectTickets.reduce((m, t) => Math.max(m, t.order || 0), 0);
-    created = {
-      id: randomUUID(),
-      projectId,
-      number,
-      title: String(title).trim().slice(0, 200),
-      description: description ? String(description).slice(0, 2000) : '',
-      done: false,
-      doneAt: null,
-      order: maxOrder + 1,
-      createdAt: new Date().toISOString()
-    };
-    state.tickets.push(created);
+
+  // Verify project exists
+  const { data: proj } = await supabase.from('projects').select('id').eq('id', projectId).single();
+  if (!proj) return NextResponse.json({ error: 'unknown project' }, { status: 400 });
+
+  // Compute next ticket number and order for this project
+  const { data: existing } = await supabase
+    .from('tickets')
+    .select('number, order')
+    .eq('project_id', projectId);
+
+  const number   = (existing ?? []).reduce((m, t) => Math.max(m, t.number || 0), 0) + 1;
+  const maxOrder = (existing ?? []).reduce((m, t) => Math.max(m, t.order  || 0), 0);
+
+  const ticket = await dbCreateTicket({
+    id: randomUUID(),
+    projectId,
+    number,
+    title: String(title).trim().slice(0, 200),
+    description: description ? String(description).slice(0, 2000) : '',
+    done: false,
+    doneAt: null,
+    order: maxOrder + 1,
+    createdAt: new Date().toISOString()
   });
-  if (badProject) return NextResponse.json({ error: 'unknown project' }, { status: 400 });
-  return NextResponse.json(created);
+
+  return NextResponse.json(ticket);
 }

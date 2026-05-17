@@ -54,6 +54,8 @@ type MoveDrag = {
   ghostStart: Date;
   ghostEnd: Date;
   hasMoved: boolean;
+  /** use larger movement threshold on touch */
+  isTouch: boolean;
 };
 
 type ResizeDrag = {
@@ -69,6 +71,16 @@ type ResizeDrag = {
 };
 
 type DragState = CreateDrag | MoveDrag | ResizeDrag;
+
+// ── Long-press state (touch only, for create-drag) ───────────────────────────
+
+type LongPress = {
+  timer: ReturnType<typeof setTimeout>;
+  startX: number;
+  startY: number;
+  dayIndex: number;
+  originY: number;
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -159,9 +171,10 @@ export default function WeekGrid({
   const colHeight = totalHours * HOUR_H;
   const [drag, setDrag] = useState<DragState | null>(null);
   const [nowTick, setNowTick] = useState(0);
-  const dragRef = useRef<DragState | null>(null);
-  const colRefs = useRef<Array<HTMLDivElement | null>>([]);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const dragRef      = useRef<DragState | null>(null);
+  const colRefs      = useRef<Array<HTMLDivElement | null>>([]);
+  const gridRef      = useRef<HTMLDivElement>(null);
+  const longPressRef = useRef<LongPress | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNowTick((n) => n + 1), 60000);
@@ -171,6 +184,29 @@ export default function WeekGrid({
   useEffect(() => {
     dragRef.current = drag;
   }, [drag]);
+
+  // Cancel a pending long-press if the finger moves or lifts before the timer fires
+  useEffect(() => {
+    const cancel = () => {
+      if (!longPressRef.current) return;
+      clearTimeout(longPressRef.current.timer);
+      longPressRef.current = null;
+    };
+    const onMove = (e: TouchEvent) => {
+      const lp = longPressRef.current;
+      if (!lp) return;
+      const t = e.touches[0];
+      if (Math.abs(t.clientX - lp.startX) > 8 || Math.abs(t.clientY - lp.startY) > 8) cancel();
+    };
+    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('touchend',  cancel, { passive: true });
+    window.addEventListener('touchcancel', cancel, { passive: true });
+    return () => {
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend',  cancel);
+      window.removeEventListener('touchcancel', cancel);
+    };
+  }, []);
 
   // Auto-scroll to show today when it's in the current week
   useEffect(() => {
@@ -205,7 +241,8 @@ export default function WeekGrid({
       } else if (d.kind === 'move') {
         const distX = Math.abs(clientX - d.originClientX);
         const distY = Math.abs(clientY - d.originClientY);
-        const hasMoved = d.hasMoved || distX > 4 || distY > 4;
+        const threshold = d.isTouch ? 14 : 4;
+        const hasMoved = d.hasMoved || distX > threshold || distY > threshold;
         const targetDay = getDayIndexAtX(colRefs, clientX);
         const dayIndex = targetDay >= 0 ? targetDay : d.dayIndex;
         const { start, end } = computeMovedTimes(
@@ -346,11 +383,25 @@ export default function WeekGrid({
                 if (target.closest('.block')) return;
                 const touch = e.touches[0];
                 const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                const y = touch.clientY - rect.top;
-                const day = addDays(weekStart, i);
-                const { start, end } = yToTimes(day, y, y);
-                setDrag({ kind: 'create', dayIndex: i, originY: y, currentY: y, ghostStart: start, ghostEnd: end });
-                e.preventDefault();
+                const originY = touch.clientY - rect.top;
+
+                // Cancel any previous pending long press
+                if (longPressRef.current) clearTimeout(longPressRef.current.timer);
+
+                // Long press required on touch — prevents accidental creation while scrolling
+                const timer = setTimeout(() => {
+                  longPressRef.current = null;
+                  if (typeof navigator.vibrate === 'function') navigator.vibrate(25);
+                  const day = addDays(weekStart, i);
+                  const { start, end } = yToTimes(day, originY, originY);
+                  setDrag({ kind: 'create', dayIndex: i, originY, currentY: originY, ghostStart: start, ghostEnd: end });
+                }, 450);
+
+                longPressRef.current = {
+                  timer, dayIndex: i, originY,
+                  startX: touch.clientX, startY: touch.clientY,
+                };
+                // Do NOT preventDefault here so native scroll still works until long press fires
               }}
             >
               {nowLineY !== null && <div className="now-line" style={{ top: nowLineY + 'px' }} />}
@@ -393,6 +444,7 @@ export default function WeekGrid({
                         ghostStart: bs,
                         ghostEnd: be,
                         hasMoved: false,
+                        isTouch: false,
                       });
                       e.preventDefault();
                     }}
@@ -412,6 +464,7 @@ export default function WeekGrid({
                         ghostStart: bs,
                         ghostEnd: be,
                         hasMoved: false,
+                        isTouch: true,
                       });
                     }}
                   >

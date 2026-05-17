@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
-import { mutate } from '@/lib/storage';
+import { dbCreateBlock } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,23 +11,19 @@ export async function POST(req: Request) {
   if (!projectId || !start || !end) {
     return NextResponse.json({ error: 'projectId, start, end required' }, { status: 400 });
   }
-  let created;
-  let badProject = false;
-  await mutate((state) => {
-    if (!state.projects.find((p) => p.id === projectId)) {
-      badProject = true;
-      return;
-    }
-    created = {
-      id: randomUUID(),
-      projectId,
-      start,
-      end,
-      note: note ? String(note).slice(0, 500) : '',
-      createdAt: new Date().toISOString()
-    };
-    state.blocks.push(created);
+
+  // Verify project exists
+  const { data: proj } = await supabase.from('projects').select('id').eq('id', projectId).single();
+  if (!proj) return NextResponse.json({ error: 'unknown project' }, { status: 400 });
+
+  const block = await dbCreateBlock({
+    id: randomUUID(),
+    projectId,
+    start,
+    end,
+    note: note ? String(note).slice(0, 500) : '',
+    createdAt: new Date().toISOString()
   });
-  if (badProject) return NextResponse.json({ error: 'unknown project' }, { status: 400 });
-  return NextResponse.json(created);
+
+  return NextResponse.json(block);
 }

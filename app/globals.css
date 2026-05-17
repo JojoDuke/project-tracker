@@ -1021,8 +1021,18 @@ dialog menu button { padding: 7px 14px; }
   .grid-header .dom { font-size: 14px; }
   .hour-label { font-size: 9px; padding: 3px 4px 0 0; }
 
-  /* Block delete button always visible on touch */
-  .block-delete { opacity: 0.85; width: 22px; height: 22px; font-size: 15px; }
+  /* Blocks: enforce a minimum tap-friendly height and always-visible delete */
+  .block { min-height: 44px; }
+  .block-delete {
+    opacity: 1;
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    top: 50%;
+    right: 4px;
+    transform: translateY(-50%);
+    border-radius: 6px;
+  }
 
   /* Dialogs: full width */
   dialog {
