@@ -26,6 +26,7 @@ interface Props {
   onAddTicket: (title: string) => Promise<void> | void;
   onOpenTicket: (t: Ticket) => void;
   onUpdateTicket: (id: string, patch: Partial<Ticket>) => Promise<void> | void;
+  onDeleteTicket: (id: string) => Promise<void> | void;
 }
 
 export default function TicketsPanel({
@@ -38,7 +39,8 @@ export default function TicketsPanel({
   onToggleShowDone,
   onAddTicket,
   onOpenTicket,
-  onUpdateTicket
+  onUpdateTicket,
+  onDeleteTicket
 }: Props) {
   const [draft, setDraft] = useState('');
 
@@ -137,6 +139,17 @@ export default function TicketsPanel({
                 style={{ ['--ticket-color' as string]: project?.color ?? 'var(--accent)' }}
                 onClick={() => onOpenTicket(t)}
               >
+                <button
+                  type="button"
+                  className="ticket-delete"
+                  aria-label="Delete ticket"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onDeleteTicket(t.id);
+                  }}
+                >
+                  ×
+                </button>
                 <input
                   type="checkbox"
                   className="ticket-checkbox"

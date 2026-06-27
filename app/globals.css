@@ -403,6 +403,32 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
+.ticket-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ticket:hover .ticket-delete { opacity: 1; }
+.ticket-delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
 .ticket-checkbox {
   appearance: none;
   -webkit-appearance: none;
@@ -1083,6 +1109,8 @@ dialog menu button { padding: 7px 14px; }
   /* Larger tap targets for project items */
   .project-item { padding: 12px 10px; }
   .project-item .edit { opacity: 1; }
+
+  .ticket-delete { opacity: 1; }
 
   /* Ticket list: fill drawer height and scroll all tickets */
   #ticketList {

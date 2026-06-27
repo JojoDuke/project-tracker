@@ -295,6 +295,7 @@ export default function AppShell() {
   const deleteTicket = useCallback(
     async (id: string) => {
       setTickets((ts) => ts.filter((t) => t.id !== id));
+      setTicketEditing((cur) => (cur?.id === id ? null : cur));
       try {
         await api.deleteTicket(id);
       } catch {
@@ -431,6 +432,7 @@ export default function AppShell() {
         }}
         onOpenTicket={(t) => { setTicketEditing(t); if (isMobile) setMobileDrawer('none'); }}
         onUpdateTicket={updateTicket}
+        onDeleteTicket={deleteTicket}
       />
       <main id="main">
         <TopBar
