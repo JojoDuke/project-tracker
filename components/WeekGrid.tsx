@@ -431,6 +431,7 @@ export default function WeekGrid({
                     }}
                     onMouseDown={(e) => {
                       if (e.button !== 0) return;
+                      if ((e.target as HTMLElement).closest('.block-delete, .block-resize-handle')) return;
                       e.stopPropagation();
                       const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
                       setDrag({
@@ -449,6 +450,7 @@ export default function WeekGrid({
                       e.preventDefault();
                     }}
                     onTouchStart={(e) => {
+                      if ((e.target as HTMLElement).closest('.block-delete, .block-resize-handle')) return;
                       e.stopPropagation();
                       e.preventDefault();
                       const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -517,13 +519,20 @@ export default function WeekGrid({
                     <button
                       className="block-delete"
                       title="Delete block"
+                      type="button"
                       style={{
                         background: textColor === '#1a1a1a' ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.40)',
                         color:      textColor === '#1a1a1a' ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.95)',
                       }}
-                      onClick={async (e) => {
+                      onMouseDown={(e) => {
                         e.stopPropagation();
-                        await onDeleteBlock(b.id);
+                        e.preventDefault();
+                        void onDeleteBlock(b.id);
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        void onDeleteBlock(b.id);
                       }}
                     >
                       ×

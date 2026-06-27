@@ -243,6 +243,7 @@ export default function AppShell() {
   const deleteBlock = useCallback(
     async (id: string) => {
       setBlocks((bs) => bs.filter((b) => b.id !== id));
+      setBlockEditing((cur) => (cur?.id === id ? null : cur));
       try {
         await api.deleteBlock(id);
       } catch {
@@ -415,6 +416,7 @@ export default function AppShell() {
       />
       <TicketsPanel
         tickets={tickets}
+        projects={projects}
         activeProject={activeProject}
         showDone={showDoneTickets}
         collapsed={isMobile ? false : ticketsCollapsed}

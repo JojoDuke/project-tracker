@@ -409,6 +409,16 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
 .ticket-meta {
   display: flex; align-items: center; gap: 6px;
   margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.ticket-project {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
 }
 .ticket-badge {
   background: var(--ticket-color, var(--accent));

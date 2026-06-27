@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Project, Ticket } from '@/lib/types';
 
 function projectPrefix(project: Project | null): string {
@@ -17,6 +17,7 @@ function ticketBadge(ticket: Ticket, project: Project | null): string {
 
 interface Props {
   tickets: Ticket[];
+  projects: Project[];
   activeProject: Project | null;
   showDone: boolean;
   collapsed: boolean;
@@ -29,6 +30,7 @@ interface Props {
 
 export default function TicketsPanel({
   tickets,
+  projects,
   activeProject,
   showDone,
   collapsed,
@@ -40,12 +42,21 @@ export default function TicketsPanel({
 }: Props) {
   const [draft, setDraft] = useState('');
 
-  const all = activeProject ? tickets.filter((t) => t.projectId === activeProject.id) : [];
+  const projectById = useMemo(() => {
+    const map = new Map<string, Project>();
+    for (const p of projects) map.set(p.id, p);
+    return map;
+  }, [projects]);
+
+  const all = tickets.filter((t) => projectById.has(t.projectId));
   const todo = all.filter((t) => !t.done);
   const done = all.filter((t) => t.done);
   const visible = showDone ? all : todo;
   const sorted = [...visible].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
+    const pa = projectById.get(a.projectId)?.name ?? '';
+    const pb = projectById.get(b.projectId)?.name ?? '';
+    if (pa !== pb) return pa.localeCompare(pb);
     return (a.order || 0) - (b.order || 0);
   });
 
@@ -67,6 +78,10 @@ export default function TicketsPanel({
     );
   }
 
+  const newTicketPlaceholder = activeProject
+    ? `+ New ticket for ${activeProject.name}`
+    : '+ New ticket — select a project first';
+
   return (
     <section id="tickets">
       <header className="tickets-head">
@@ -76,17 +91,20 @@ export default function TicketsPanel({
             «
           </button>
         </h1>
-        <span id="ticketsProject">{activeProject ? activeProject.name : 'No project'}</span>
+        <span id="ticketsProject">
+          {all.length > 0 ? `${todo.length} open · ${done.length} done` : 'All projects'}
+        </span>
       </header>
       <form id="newTicketForm" onSubmit={handleSubmit}>
         <input
           type="text"
           id="newTicketTitle"
-          placeholder="+ New ticket (enter)"
+          placeholder={newTicketPlaceholder}
           maxLength={200}
           autoComplete="off"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          disabled={!activeProject}
         />
       </form>
       <div className="tickets-toggle">
@@ -99,44 +117,47 @@ export default function TicketsPanel({
           />{' '}
           Show done
         </label>
-        <span id="ticketCounts">
-          {activeProject ? `${todo.length} open · ${done.length} done` : ''}
-        </span>
       </div>
       <ul id="ticketList">
-        {!activeProject ? (
-          <div className="ticket-empty">Select a project to see tickets</div>
-        ) : visible.length === 0 ? (
+        {visible.length === 0 ? (
           <div className="ticket-empty">
-            {all.length === 0 ? 'No tickets yet — add one above' : 'All done. Nice.'}
+            {all.length === 0
+              ? 'No tickets yet — add one above'
+              : showDone
+                ? 'No tickets'
+                : 'All done. Nice.'}
           </div>
         ) : (
-          sorted.map((t) => (
-            <li
-              key={t.id}
-              className={'ticket' + (t.done ? ' done' : '')}
-              style={{ ['--ticket-color' as string]: activeProject.color }}
-              onClick={() => onOpenTicket(t)}
-            >
-              <input
-                type="checkbox"
-                className="ticket-checkbox"
-                checked={t.done}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  onUpdateTicket(t.id, { done: e.target.checked });
-                }}
-              />
-              <div className="ticket-body">
-                <div className="ticket-meta">
-                  <span className="ticket-badge">{ticketBadge(t, activeProject)}</span>
+          sorted.map((t) => {
+            const project = projectById.get(t.projectId) ?? null;
+            return (
+              <li
+                key={t.id}
+                className={'ticket' + (t.done ? ' done' : '')}
+                style={{ ['--ticket-color' as string]: project?.color ?? 'var(--accent)' }}
+                onClick={() => onOpenTicket(t)}
+              >
+                <input
+                  type="checkbox"
+                  className="ticket-checkbox"
+                  checked={t.done}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    onUpdateTicket(t.id, { done: e.target.checked });
+                  }}
+                />
+                <div className="ticket-body">
+                  <div className="ticket-meta">
+                    <span className="ticket-badge">{ticketBadge(t, project)}</span>
+                    {project && <span className="ticket-project">{project.name}</span>}
+                  </div>
+                  <div className="ticket-title">{t.title}</div>
+                  {t.description && <div className="ticket-desc">{t.description}</div>}
                 </div>
-                <div className="ticket-title">{t.title}</div>
-                {t.description && <div className="ticket-desc">{t.description}</div>}
-              </div>
-            </li>
-          ))
+              </li>
+            );
+          })
         )}
       </ul>
     </section>
