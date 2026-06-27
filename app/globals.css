@@ -16,6 +16,9 @@
   --warning: #f59e0b;
   --danger: #ef4444;
   --hour-h: 48px;
+  --ticket-list-gap: 8px;
+  --ticket-list-visible: 5;
+  --ticket-row-height: 72px;
   --radius: 10px;
   --radius-sm: 6px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -40,6 +43,11 @@ body {
   display: flex;
   height: 100vh;
   position: relative;
+}
+.app-shell > #sidebar,
+.app-shell > #tickets,
+.app-shell > #main {
+  min-height: 0;
 }
 
 h1, h2 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
@@ -350,7 +358,23 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
 .tickets-toggle label { display: flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
 .tickets-toggle input[type=checkbox] { accent-color: var(--accent); }
 #ticketCounts { font-variant-numeric: tabular-nums; }
-#ticketList { list-style: none; padding: 2px 14px 16px; margin: 0; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+#ticketList {
+  list-style: none;
+  padding: 2px 14px 16px;
+  margin: 0;
+  overflow-y: auto;
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ticket-list-gap);
+}
+#ticketList[data-scroll] {
+  max-height: calc(
+    var(--ticket-row-height) * var(--ticket-list-visible) +
+    var(--ticket-list-gap) * (var(--ticket-list-visible) - 1)
+  );
+}
 
 .ticket {
   position: relative;
@@ -1060,7 +1084,13 @@ dialog menu button { padding: 7px 14px; }
   .project-item { padding: 12px 10px; }
   .project-item .edit { opacity: 1; }
 
-  /* Ticket list padding */
-  #ticketList { padding: 2px 10px 80px; }
+  /* Ticket list: fill drawer height and scroll all tickets */
+  #ticketList {
+    flex: 1;
+    padding: 2px 10px 80px;
+  }
+  #ticketList[data-scroll] {
+    max-height: none;
+  }
   #newTicketForm { padding: 6px 10px; }
 }
