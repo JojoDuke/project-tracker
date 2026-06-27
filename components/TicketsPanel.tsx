@@ -120,7 +120,7 @@ export default function TicketsPanel({
           Show done
         </label>
       </div>
-      <ul id="ticketList" data-scroll={sorted.length >= 5 ? '' : undefined}>
+      <ul id="ticketList">
         {visible.length === 0 ? (
           <div className="ticket-empty">
             {all.length === 0
