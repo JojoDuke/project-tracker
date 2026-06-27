@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Project } from '@/lib/types';
 import { addDays, fmtDate } from '@/lib/time';
+import { pomoAudio } from '@/lib/pomo-audio';
 import { PomoSettingsDialog } from './Dialogs';
 
 interface Props {
@@ -59,27 +60,13 @@ function pomoPhaseLabel(phase: PomoPhase): string {
   return 'Rest';
 }
 
-function beep() {
-  try {
-    const Ctx =
-      (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g);
-    g.connect(ctx.destination);
-    o.type = 'sine';
-    o.frequency.setValueAtTime(880, ctx.currentTime);
-    g.gain.setValueAtTime(0.0001, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
-    o.start();
-    o.stop(ctx.currentTime + 0.5);
-    setTimeout(() => ctx.close(), 600);
-  } catch {
-    /* noop */
-  }
+function playStartSound(phase: PomoPhase) {
+  pomoAudio.unlock();
+  void pomoAudio.playStart(phase);
+}
+
+function playCompleteSound(phase: PomoPhase) {
+  void pomoAudio.playComplete(phase);
 }
 
 export default function TopBar({
@@ -131,7 +118,8 @@ export default function TopBar({
   }, [running, remaining, phase]);
 
   const complete = useCallback(async () => {
-    if (settings.sound) beep();
+    const endedPhase = phase;
+    if (settings.sound) playCompleteSound(endedPhase);
     setRunning(false);
     if (phase === 'work') {
       const newCycles = cycles + 1;
@@ -151,11 +139,17 @@ export default function TopBar({
     }
     phaseStartedAt.current = null;
     if (settings.autoStart) {
+      const nextPhase: PomoPhase =
+        endedPhase === 'work'
+          ? cycles + 1 > 0 && (cycles + 1) % settings.longEvery === 0
+            ? 'long-rest'
+            : 'rest'
+          : 'work';
       setTimeout(() => {
-        if (settings.sound) beep();
+        if (settings.sound) playStartSound(nextPhase);
         phaseStartedAt.current = new Date();
         setRunning(true);
-      }, 700);
+      }, 900);
     }
   }, [settings, phase, cycles, onWorkBlockLogged]);
 
@@ -183,7 +177,7 @@ export default function TopBar({
     } else {
       setRemaining((r) => (r <= 0 ? phaseDuration(phase) : r));
       phaseStartedAt.current = phaseStartedAt.current ?? new Date();
-      if (settings.sound) beep();
+      if (settings.sound) playStartSound(phase);
       setRunning(true);
     }
   }, [running, phase, phaseDuration, settings.sound]);
