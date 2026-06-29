@@ -298,6 +298,23 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
 
 .sidebar-foot { padding: 14px 14px 16px; border-top: 1px solid var(--border); }
 .sidebar-foot button { width: 100%; padding: 8px 12px; }
+.block-notify-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+.block-notify-toggle input { accent-color: var(--accent); flex-shrink: 0; }
+.block-notify-hint {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin: 6px 0 0;
+  line-height: 1.45;
+}
 .hint { color: var(--muted); font-size: 10.5px; margin: 10px 0 0; line-height: 1.6; }
 
 /* --- Tickets panel --- */

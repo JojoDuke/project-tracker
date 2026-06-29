@@ -27,6 +27,9 @@ interface Props {
   onDeleteProject: (p: Project) => void;
   onNewProject: () => void;
   onQuickLog: () => void;
+  blockNotifyEnabled: boolean;
+  notifyPermission: NotificationPermission;
+  onBlockNotifyChange: (enabled: boolean) => void | Promise<void>;
 }
 
 export default function Sidebar({
@@ -39,7 +42,10 @@ export default function Sidebar({
   onEditProject,
   onDeleteProject,
   onNewProject,
-  onQuickLog
+  onQuickLog,
+  blockNotifyEnabled,
+  notifyPermission,
+  onBlockNotifyChange
 }: Props) {
   const [archiveCollapsed, setArchiveCollapsed] = useState(false);
 
@@ -138,6 +144,20 @@ export default function Sidebar({
         <button onClick={onQuickLog} title="Quick capture (q)">
           + Log time
         </button>
+        <label className="block-notify-toggle">
+          <input
+            type="checkbox"
+            checked={blockNotifyEnabled}
+            onChange={(e) => void onBlockNotifyChange(e.target.checked)}
+          />
+          Time Block Notifications
+        </label>
+        {blockNotifyEnabled && notifyPermission === 'denied' && (
+          <p className="block-notify-hint">Enable notifications in your browser settings.</p>
+        )}
+        {blockNotifyEnabled && notifyPermission === 'default' && (
+          <p className="block-notify-hint">Allow notifications when your browser prompts you.</p>
+        )}
         <p className="hint">
           Drag on grid to block · click block to edit · hover block + × to delete · n: new project · T: new ticket · q: quick log · p: pomodoro · [ ]: week nav · t: today
         </p>

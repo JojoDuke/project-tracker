@@ -3,11 +3,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AppState, Project, ProjectStatus, Ticket, TimeBlock } from '@/lib/types';
 import { api } from '@/lib/api';
+import {
+  clearBlockFiredKeys,
+  loadBlockNotifyPrefs,
+  requestNotificationPermission,
+  saveBlockNotifyPrefs
+} from '@/lib/block-notifications';
 import { addDays, snap, weekStartOf } from '@/lib/time';
 import Sidebar from './Sidebar';
 import TicketsPanel from './TicketsPanel';
 import TopBar from './TopBar';
 import WeekGrid from './WeekGrid';
+import { useBlockNotifications } from './useBlockNotifications';
 import {
   BlockDialog,
   ConfirmDialog,
@@ -61,6 +68,7 @@ export default function AppShell() {
   const [ticketsCollapsed, setTicketsCollapsedState] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileDrawer, setMobileDrawer] = useState<'none' | 'sidebar' | 'tickets'>('none');
+  const [blockNotifyEnabled, setBlockNotifyEnabledState] = useState(false);
 
   const setActiveProjectId = useCallback((id: string | null) => {
     setActiveProjectIdState(id);
@@ -91,6 +99,14 @@ export default function AppShell() {
     });
   }, []);
 
+  const setBlockNotifyEnabled = useCallback(async (enabled: boolean) => {
+    if (enabled) {
+      await requestNotificationPermission();
+    }
+    setBlockNotifyEnabledState(enabled);
+    saveBlockNotifyPrefs({ enabled });
+  }, []);
+
   const applyState = useCallback((s: AppState) => {
     setProjects(s.projects);
     setTickets(s.tickets);
@@ -114,6 +130,7 @@ export default function AppShell() {
     setShowDoneTicketsState(prefs.showDoneTickets ?? true);
     setSidebarCollapsedState(prefs.sidebarCollapsed ?? false);
     setTicketsCollapsedState(prefs.ticketsCollapsed ?? false);
+    setBlockNotifyEnabledState(loadBlockNotifyPrefs().enabled);
     setHydrated(true);
     refresh().catch(() => {});
   }, [refresh]);
@@ -167,6 +184,12 @@ export default function AppShell() {
   const activeProject = useMemo(
     () => projects.find((p) => p.id === activeProjectId) ?? null,
     [projects, activeProjectId]
+  );
+
+  const { permission: notifyPermission, refreshPermission } = useBlockNotifications(
+    blocks,
+    projects,
+    blockNotifyEnabled && hydrated
   );
 
   // Pomodoro log-block sink: called by TopBar when a work phase completes
@@ -230,6 +253,9 @@ export default function AppShell() {
 
   const updateBlock = useCallback(
     async (id: string, patch: Partial<TimeBlock>) => {
+      if (patch.start !== undefined || patch.end !== undefined) {
+        clearBlockFiredKeys(id);
+      }
       setBlocks((bs) => bs.map((b) => (b.id === id ? { ...b, ...patch } : b)));
       try {
         await api.updateBlock(id, patch);
@@ -242,6 +268,7 @@ export default function AppShell() {
 
   const deleteBlock = useCallback(
     async (id: string) => {
+      clearBlockFiredKeys(id);
       setBlocks((bs) => bs.filter((b) => b.id !== id));
       setBlockEditing((cur) => (cur?.id === id ? null : cur));
       try {
@@ -414,6 +441,12 @@ export default function AppShell() {
         onDeleteProject={(p) => setConfirmDelete(p)}
         onNewProject={() => { setProjectEditing(null); if (isMobile) setMobileDrawer('none'); }}
         onQuickLog={() => { setQuickOpen(true); if (isMobile) setMobileDrawer('none'); }}
+        blockNotifyEnabled={blockNotifyEnabled}
+        notifyPermission={notifyPermission}
+        onBlockNotifyChange={async (enabled) => {
+          await setBlockNotifyEnabled(enabled);
+          refreshPermission();
+        }}
       />
       <TicketsPanel
         tickets={tickets}
