@@ -326,12 +326,14 @@ export function TicketDialog({ ticket, project, onClose, onSave, onDelete }: Tic
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [done, setDone] = useState(false);
+  const [priority, setPriority] = useState(false);
 
   useEffect(() => {
     if (!ticket) return;
     setTitle(ticket.title);
     setDescription(ticket.description || '');
     setDone(!!ticket.done);
+    setPriority(!!ticket.priority);
   }, [ticket]);
 
   const badge = useMemo(() => {
@@ -366,7 +368,7 @@ export function TicketDialog({ ticket, project, onClose, onSave, onDelete }: Tic
             const trimmed = title.trim();
             if (!trimmed) return;
             onClose();
-            void onSave(ticket.id, { title: trimmed, description, done });
+            void onSave(ticket.id, { title: trimmed, description, done, priority });
             return;
           }
           onClose();
@@ -400,6 +402,10 @@ export function TicketDialog({ ticket, project, onClose, onSave, onDelete }: Tic
         </label>
         <label className="row">
           <input type="checkbox" checked={done} onChange={(e) => setDone(e.target.checked)} /> Done
+        </label>
+        <label className="row">
+          <input type="checkbox" checked={priority} onChange={(e) => setPriority(e.target.checked)} />{' '}
+          Priority — focus on this task right now
         </label>
         <menu>
           <button value="delete" type="submit" className="danger" formNoValidate>

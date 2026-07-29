@@ -293,6 +293,7 @@ export default function AppShell() {
         done: false,
         doneAt: null,
         order: 999999,
+        priority: false,
         createdAt: new Date().toISOString()
       };
       setTickets((ts) => [...ts, optimistic]);
@@ -309,9 +310,38 @@ export default function AppShell() {
 
   const updateTicket = useCallback(
     async (id: string, patch: Partial<Ticket>) => {
-      setTickets((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+      let clearIds: string[] = [];
+      setTickets((ts) => {
+        clearIds =
+          patch.priority === true ? ts.filter((t) => t.id !== id && t.priority).map((t) => t.id) : [];
+        return ts.map((t) => {
+          if (t.id === id) return { ...t, ...patch };
+          if (patch.priority === true) return { ...t, priority: false };
+          return t;
+        });
+      });
       try {
-        await api.updateTicket(id, patch);
+        await Promise.all([
+          ...clearIds.map((cid) => api.updateTicket(cid, { priority: false })),
+          api.updateTicket(id, patch)
+        ]);
+      } catch {
+        await refresh();
+      }
+    },
+    [refresh]
+  );
+
+  const reorderTickets = useCallback(
+    async (orderedOpenIds: string[]) => {
+      const orderMap = new Map(orderedOpenIds.map((tid, i) => [tid, i + 1]));
+      setTickets((ts) =>
+        ts.map((t) => (orderMap.has(t.id) ? { ...t, order: orderMap.get(t.id)! } : t))
+      );
+      try {
+        await Promise.all(
+          orderedOpenIds.map((tid, i) => api.updateTicket(tid, { order: i + 1 }))
+        );
       } catch {
         await refresh();
       }
@@ -466,6 +496,7 @@ export default function AppShell() {
         onOpenTicket={(t) => { setTicketEditing(t); if (isMobile) setMobileDrawer('none'); }}
         onUpdateTicket={updateTicket}
         onDeleteTicket={deleteTicket}
+        onReorderTickets={reorderTickets}
       />
       <main id="main">
         <TopBar

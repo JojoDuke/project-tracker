@@ -34,6 +34,7 @@ export async function POST(req: Request) {
     done: false,
     doneAt: null,
     order: maxOrder + 1,
+    priority: false,
     createdAt: new Date().toISOString()
   });
 

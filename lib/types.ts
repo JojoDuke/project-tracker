@@ -21,6 +21,7 @@ export interface Ticket {
   done: boolean;
   doneAt: string | null;
   order: number;
+  priority: boolean;
   createdAt: string;
 }
 

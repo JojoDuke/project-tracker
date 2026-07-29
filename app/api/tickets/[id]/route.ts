@@ -10,7 +10,7 @@ interface Ctx {
 export async function PATCH(req: Request, { params }: Ctx) {
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const { title, description, done, order, projectId } = body ?? {};
+  const { title, description, done, order, projectId, priority } = body ?? {};
 
   try {
     const ticket = await dbUpdateTicket(id, {
@@ -21,7 +21,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
         doneAt: done ? new Date().toISOString() : null
       }),
       ...(order     !== undefined && { order: Number(order) }),
-      ...(projectId !== undefined && { projectId })
+      ...(projectId !== undefined && { projectId }),
+      ...(priority  !== undefined && { priority: !!priority })
     });
     return NextResponse.json(ticket);
   } catch (e) {

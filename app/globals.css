@@ -393,13 +393,86 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 11px 12px 11px 14px;
+  padding: 11px 36px 11px 10px;
   cursor: pointer;
   display: grid;
-  grid-template-columns: 18px 1fr;
-  gap: 10px;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.06s ease, box-shadow 0.15s ease;
+  grid-template-columns: 14px 18px 1fr;
+  gap: 8px 10px;
+  align-items: start;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.06s ease, box-shadow 0.15s ease, opacity 0.12s ease;
   overflow: hidden;
+}
+.ticket.done {
+  grid-template-columns: 18px 1fr;
+  padding-left: 14px;
+}
+.ticket.priority {
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.12);
+}
+.ticket.priority::before {
+  opacity: 1;
+  width: 4px;
+}
+.ticket.dragging {
+  opacity: 0.45;
+}
+.ticket.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.ticket-drag-handle {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: grab;
+  user-select: none;
+  padding-top: 2px;
+  touch-action: none;
+}
+.ticket-drag-handle:active { cursor: grabbing; }
+.ticket-priority-btn {
+  position: absolute;
+  top: 6px;
+  right: 28px;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ticket:hover .ticket-priority-btn,
+.ticket.priority .ticket-priority-btn { opacity: 1; }
+.ticket-priority-btn.active {
+  color: #fbbf24;
+  opacity: 1;
+}
+.ticket-priority-btn:hover {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+}
+.ticket-priority-pill {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
 }
 .ticket::before {
   content: '';
@@ -1123,6 +1196,7 @@ dialog menu button { padding: 7px 14px; }
   .project-item .edit { opacity: 1; }
 
   .ticket-delete { opacity: 1; }
+  .ticket-priority-btn { opacity: 1; }
 
   /* Ticket list: fill drawer height and scroll all tickets */
   #ticketList {

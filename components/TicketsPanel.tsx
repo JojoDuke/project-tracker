@@ -15,6 +15,16 @@ function ticketBadge(ticket: Ticket, project: Project | null): string {
   return `${projectPrefix(project)}-${ticket.number}`;
 }
 
+function reorderIds(ids: string[], fromId: string, toId: string): string[] {
+  const fromIdx = ids.indexOf(fromId);
+  const toIdx = ids.indexOf(toId);
+  if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return ids;
+  const next = [...ids];
+  next.splice(fromIdx, 1);
+  next.splice(toIdx, 0, fromId);
+  return next;
+}
+
 interface Props {
   tickets: Ticket[];
   projects: Project[];
@@ -27,6 +37,7 @@ interface Props {
   onOpenTicket: (t: Ticket) => void;
   onUpdateTicket: (id: string, patch: Partial<Ticket>) => Promise<void> | void;
   onDeleteTicket: (id: string) => Promise<void> | void;
+  onReorderTickets: (orderedOpenIds: string[]) => Promise<void> | void;
 }
 
 export default function TicketsPanel({
@@ -40,9 +51,12 @@ export default function TicketsPanel({
   onAddTicket,
   onOpenTicket,
   onUpdateTicket,
-  onDeleteTicket
+  onDeleteTicket,
+  onReorderTickets
 }: Props) {
   const [draft, setDraft] = useState('');
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
 
   const projectById = useMemo(() => {
     const map = new Map<string, Project>();
@@ -56,11 +70,17 @@ export default function TicketsPanel({
   const visible = showDone ? all : todo;
   const sorted = [...visible].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
+    if (!a.done && !b.done) {
+      if (a.priority !== b.priority) return a.priority ? -1 : 1;
+      return (a.order || 0) - (b.order || 0);
+    }
     const pa = projectById.get(a.projectId)?.name ?? '';
     const pb = projectById.get(b.projectId)?.name ?? '';
     if (pa !== pb) return pa.localeCompare(pb);
     return (a.order || 0) - (b.order || 0);
   });
+
+  const openIds = sorted.filter((t) => !t.done).map((t) => t.id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +88,16 @@ export default function TicketsPanel({
     if (!title) return;
     setDraft('');
     await onAddTicket(title);
+  };
+
+  const handleDrop = (targetId: string) => {
+    const fromId = dragId;
+    setDragId(null);
+    setOverId(null);
+    if (!fromId || fromId === targetId) return;
+    const target = sorted.find((t) => t.id === targetId);
+    if (!target || target.done) return;
+    void onReorderTickets(reorderIds(openIds, fromId, targetId));
   };
 
   if (collapsed) {
@@ -132,13 +162,70 @@ export default function TicketsPanel({
         ) : (
           sorted.map((t) => {
             const project = projectById.get(t.projectId) ?? null;
+            const isDragging = dragId === t.id;
+            const isOver = overId === t.id && dragId !== t.id;
+            const draggable = !t.done;
+
             return (
               <li
                 key={t.id}
-                className={'ticket' + (t.done ? ' done' : '')}
+                className={[
+                  'ticket',
+                  t.done ? 'done' : '',
+                  t.priority ? 'priority' : '',
+                  isDragging ? 'dragging' : '',
+                  isOver ? 'drag-over' : ''
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 style={{ ['--ticket-color' as string]: project?.color ?? 'var(--accent)' }}
                 onClick={() => onOpenTicket(t)}
+                onDragOver={(e) => {
+                  if (!draggable || !dragId) return;
+                  e.preventDefault();
+                  setOverId(t.id);
+                }}
+                onDragLeave={() => {
+                  if (overId === t.id) setOverId(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDrop(t.id);
+                }}
               >
+                {!t.done && (
+                  <span
+                    className="ticket-drag-handle"
+                    title="Drag to reorder"
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      setDragId(t.id);
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', t.id);
+                    }}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOverId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    ⠿
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className={'ticket-priority-btn' + (t.priority ? ' active' : '')}
+                  title={t.priority ? 'Clear priority' : 'Mark as priority'}
+                  aria-label={t.priority ? 'Clear priority' : 'Mark as priority'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onUpdateTicket(t.id, { priority: !t.priority });
+                  }}
+                >
+                  ★
+                </button>
                 <button
                   type="button"
                   className="ticket-delete"
@@ -163,6 +250,7 @@ export default function TicketsPanel({
                 <div className="ticket-body">
                   <div className="ticket-meta">
                     <span className="ticket-badge">{ticketBadge(t, project)}</span>
+                    {t.priority && <span className="ticket-priority-pill">Priority</span>}
                     {project && <span className="ticket-project">{project.name}</span>}
                   </div>
                   <div className="ticket-title">{t.title}</div>

@@ -30,6 +30,7 @@ function toTicket(row: any): Ticket {
     done: row.done,
     doneAt: row.done_at ?? null,
     order: row.order,
+    priority: row.priority ?? false,
     createdAt: row.created_at
   };
 }
@@ -183,6 +184,7 @@ export async function dbCreateTicket(t: Ticket): Promise<Ticket> {
       done: t.done,
       done_at: t.doneAt,
       order: t.order,
+      priority: t.priority ?? false,
       created_at: t.createdAt
     })
     .select()
@@ -193,7 +195,7 @@ export async function dbCreateTicket(t: Ticket): Promise<Ticket> {
 
 export async function dbUpdateTicket(
   id: string,
-  patch: Partial<{ title: string; description: string; done: boolean; doneAt: string | null; order: number; projectId: string }>
+  patch: Partial<{ title: string; description: string; done: boolean; doneAt: string | null; order: number; projectId: string; priority: boolean }>
 ): Promise<Ticket> {
   const update: Record<string, unknown> = {};
   if (patch.title       !== undefined) update.title       = patch.title;
@@ -202,6 +204,7 @@ export async function dbUpdateTicket(
   if (patch.doneAt      !== undefined) update.done_at     = patch.doneAt;
   if (patch.order       !== undefined) update.order       = patch.order;
   if (patch.projectId   !== undefined) update.project_id  = patch.projectId;
+  if (patch.priority    !== undefined) update.priority    = patch.priority;
 
   const { data, error } = await supabase
     .from('tickets')
@@ -242,7 +245,7 @@ export async function replaceAllData(state: AppState): Promise<void> {
       state.tickets.map((t) => ({
         id: t.id, project_id: t.projectId, number: t.number, title: t.title,
         description: t.description, done: t.done, done_at: t.doneAt,
-        order: t.order, created_at: t.createdAt
+        order: t.order, priority: t.priority ?? false, created_at: t.createdAt
       }))
     );
     if (error) throw new Error(`import tickets failed: ${error.message}`);
