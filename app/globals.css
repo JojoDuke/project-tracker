@@ -1288,14 +1288,20 @@ dialog menu button { padding: 7px 14px; }
 }
 .habit-cell.active:hover:not(:disabled) { filter: brightness(1.08); }
 .habit-cell.today { box-shadow: 0 0 0 2px var(--text); }
-.habit-cell.future {
-  opacity: 0.28;
+.habit-cell.outside,
+.habit-cell.future:not(.active) {
+  background: #23262e;
+  color: var(--muted);
   cursor: default;
 }
 .habit-cell.outside {
-  background: transparent;
-  border-color: transparent;
-  cursor: default;
+  opacity: 0.72;
+}
+.habit-cell.future:not(.active):not(.outside) {
+  opacity: 0.55;
+}
+.habit-cell.outside.future {
+  opacity: 0.5;
 }
 .habit-cell:disabled:not(.future):not(.outside) { cursor: default; }
 

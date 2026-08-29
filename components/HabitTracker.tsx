@@ -173,7 +173,7 @@ export default function HabitTracker({
                   const fromMark = marked.has(key);
                   const canToggle = inMonth && !isFuture && !(fromWork && !fromMark);
                   const title = !inMonth
-                    ? fmtLong(day)
+                    ? `${fmtLong(day)} · ${day < grid.month ? 'previous' : 'next'} month`
                     : isFuture
                       ? fmtLong(day)
                       : `${fmtLong(day)}${fromWork ? ' · logged time' : ''}${fromMark ? ' · checked in' : ''}${!isActive ? ' · click to check in' : fromWork && !fromMark ? ' · from time logged' : ' · click to clear'}`;
@@ -207,7 +207,7 @@ export default function HabitTracker({
                         if (canToggle) onToggleDay(key);
                       }}
                     >
-                      {inMonth ? day.getDate() : ''}
+                      {day.getDate()}
                     </button>
                   );
                 })}
