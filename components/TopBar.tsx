@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Project } from '@/lib/types';
-import { addDays, fmtDate } from '@/lib/time';
+import { addDays, fmtDate, fmtMonth } from '@/lib/time';
 import { pomoAudio } from '@/lib/pomo-audio';
 import { PomoSettingsDialog } from './Dialogs';
 
@@ -13,6 +13,10 @@ interface Props {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  habitMonth: Date;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  onThisMonth: () => void;
   mainView: MainView;
   onViewChange: (view: MainView) => void;
   activeProject: Project | null;
@@ -78,6 +82,10 @@ export default function TopBar({
   onPrev,
   onNext,
   onToday,
+  habitMonth,
+  onPrevMonth,
+  onNextMonth,
+  onThisMonth,
   mainView,
   onViewChange,
   activeProject,
@@ -254,7 +262,18 @@ export default function TopBar({
         </>
       )}
       {mainView === 'habits' && (
-        <span id="weekLabel">Days you showed up</span>
+        <>
+          <button onClick={onPrevMonth} title="Previous month ([)">
+            ‹
+          </button>
+          <button onClick={onThisMonth} title="This month (t)">
+            This month
+          </button>
+          <button onClick={onNextMonth} title="Next month (])">
+            ›
+          </button>
+          <span id="weekLabel">{fmtMonth(habitMonth)}</span>
+        </>
       )}
       <span className="spacer" />
       <div

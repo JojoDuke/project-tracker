@@ -4,25 +4,21 @@ import { useMemo, useState } from 'react';
 import type { HabitMark, Project, TimeBlock } from '@/lib/types';
 import {
   HABIT_DOW_LABELS,
-  HABIT_RANGES,
-  type HabitRangeId,
   activeHabitDays,
-  buildHabitGrid,
+  buildHabitMonthGrid,
   computeHabitStats,
+  isInHabitMonth,
   markForDay,
   markedDays,
-  rangeMonths,
-  rangeTitle,
   workedDaysFromBlocks
 } from '@/lib/habits';
-import { contrastColor, localDateKey, sameDay, startOfLocalDay } from '@/lib/time';
+import { contrastColor, fmtMonth, localDateKey, sameDay, startOfLocalDay } from '@/lib/time';
 
 interface Props {
   project: Project | null;
   blocks: TimeBlock[];
   habitMarks: HabitMark[];
-  range: HabitRangeId;
-  onRangeChange: (range: HabitRangeId) => void;
+  month: Date;
   onToggleDay: (day: string) => void;
   onGoalChange: (goal: number | null) => void;
 }
@@ -40,8 +36,7 @@ export default function HabitTracker({
   project,
   blocks,
   habitMarks,
-  range,
-  onRangeChange,
+  month,
   onToggleDay,
   onGoalChange
 }: Props) {
@@ -49,8 +44,7 @@ export default function HabitTracker({
 
   const today = useMemo(() => startOfLocalDay(new Date()), []);
   const todayKey = localDateKey(today);
-  const monthsBack = rangeMonths(range);
-  const grid = useMemo(() => buildHabitGrid(monthsBack, today), [monthsBack, today]);
+  const grid = useMemo(() => buildHabitMonthGrid(month, today), [month, today]);
 
   const worked = useMemo(
     () => (project ? workedDaysFromBlocks(blocks, project.id) : new Set<string>()),
@@ -93,18 +87,6 @@ export default function HabitTracker({
             <span className="swatch" style={{ background: project.color }} />
             {project.name}
           </h2>
-          <div className="habit-range" role="radiogroup" aria-label="Date range">
-            {HABIT_RANGES.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                className={range === r.id ? 'active' : ''}
-                onClick={() => onRangeChange(r.id)}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
         </div>
         <p className="habit-lede">
           Days you logged time light up automatically. Click any past day to check in without a time
@@ -177,33 +159,25 @@ export default function HabitTracker({
       )}
 
       <section className="habit-card">
-        <h3>{rangeTitle(range)}</h3>
+        <h3>{fmtMonth(grid.month)}</h3>
         <div className="habit-graph" style={{ '--habit-weeks': String(grid.weeks.length) } as React.CSSProperties}>
-          <div className="habit-months">
-            {grid.months.map((m) => (
-              <span
-                key={m.key}
-                className="habit-month"
-                style={{ gridColumn: `${m.weekIndex + 1} / span ${m.span}` }}
-              >
-                {m.label}
-              </span>
-            ))}
-          </div>
           <div className="habit-weeks">
             {grid.weeks.map((week) => (
               <div key={localDateKey(week[0])} className="habit-week">
                 {week.map((day) => {
                   const key = localDateKey(day);
+                  const inMonth = isInHabitMonth(day, grid.month);
                   const isFuture = day > today;
                   const isToday = sameDay(day, today);
-                  const isActive = active.has(key);
+                  const isActive = inMonth && active.has(key);
                   const fromWork = worked.has(key);
                   const fromMark = marked.has(key);
-                  const canToggle = !isFuture && !(fromWork && !fromMark);
-                  const title = isFuture
+                  const canToggle = inMonth && !isFuture && !(fromWork && !fromMark);
+                  const title = !inMonth
                     ? fmtLong(day)
-                    : `${fmtLong(day)}${fromWork ? ' · logged time' : ''}${fromMark ? ' · checked in' : ''}${!isActive ? ' · click to check in' : fromWork && !fromMark ? ' · from time logged' : ' · click to clear'}`;
+                    : isFuture
+                      ? fmtLong(day)
+                      : `${fmtLong(day)}${fromWork ? ' · logged time' : ''}${fromMark ? ' · checked in' : ''}${!isActive ? ' · click to check in' : fromWork && !fromMark ? ' · from time logged' : ' · click to clear'}`;
 
                   return (
                     <button
@@ -213,7 +187,8 @@ export default function HabitTracker({
                         'habit-cell',
                         isActive ? 'active' : '',
                         isToday ? 'today' : '',
-                        isFuture ? 'future' : ''
+                        isFuture ? 'future' : '',
+                        inMonth ? '' : 'outside'
                       ]
                         .filter(Boolean)
                         .join(' ')}
@@ -233,7 +208,7 @@ export default function HabitTracker({
                         if (canToggle) onToggleDay(key);
                       }}
                     >
-                      {day.getDate()}
+                      {inMonth ? day.getDate() : ''}
                     </button>
                   );
                 })}

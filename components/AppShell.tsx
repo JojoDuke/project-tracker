@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AppState, HabitMark, Project, ProjectStatus, Ticket, TimeBlock } from '@/lib/types';
 import { normalizeHabitGoal } from '@/lib/types';
-import { isHabitRangeId, markForDay, type HabitRangeId } from '@/lib/habits';
+import { markForDay } from '@/lib/habits';
 import { api } from '@/lib/api';
 import {
   clearBlockFiredKeys,
@@ -11,7 +11,7 @@ import {
   requestNotificationPermission,
   saveBlockNotifyPrefs
 } from '@/lib/block-notifications';
-import { addDays, snap, weekStartOf } from '@/lib/time';
+import { addDays, addMonths, monthKey, monthStartOf, parseMonthKey, snap, weekStartOf } from '@/lib/time';
 import HabitTracker from './HabitTracker';
 import Sidebar from './Sidebar';
 import TicketsPanel from './TicketsPanel';
@@ -35,7 +35,7 @@ interface UiPrefs {
   sidebarCollapsed?: boolean;
   ticketsCollapsed?: boolean;
   mainView?: MainView;
-  habitRange?: HabitRangeId;
+  habitMonth?: string;
 }
 
 function loadUiPrefs(): UiPrefs {
@@ -60,7 +60,7 @@ export default function AppShell() {
   const [blocks, setBlocks] = useState<TimeBlock[]>([]);
   const [habitMarks, setHabitMarks] = useState<HabitMark[]>([]);
   const [mainView, setMainViewState] = useState<MainView>('calendar');
-  const [habitRange, setHabitRangeState] = useState<HabitRangeId>('3m');
+  const [habitMonth, setHabitMonthState] = useState<Date | null>(null);
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [weekStart, setWeekStartState] = useState<Date | null>(null);
   const [showDoneTickets, setShowDoneTicketsState] = useState<boolean>(true);
@@ -120,9 +120,10 @@ export default function AppShell() {
     saveUiPrefs({ mainView: view });
   }, []);
 
-  const setHabitRange = useCallback((range: HabitRangeId) => {
-    setHabitRangeState(range);
-    saveUiPrefs({ habitRange: range });
+  const setHabitMonth = useCallback((d: Date) => {
+    const next = monthStartOf(d);
+    setHabitMonthState(next);
+    saveUiPrefs({ habitMonth: monthKey(next) });
   }, []);
 
   const applyState = useCallback((s: AppState) => {
@@ -152,7 +153,7 @@ export default function AppShell() {
     if (prefs.mainView === 'calendar' || prefs.mainView === 'habits') {
       setMainViewState(prefs.mainView);
     }
-    if (isHabitRangeId(prefs.habitRange)) setHabitRangeState(prefs.habitRange);
+    setHabitMonthState(prefs.habitMonth ? parseMonthKey(prefs.habitMonth) ?? monthStartOf(new Date()) : monthStartOf(new Date()));
     setBlockNotifyEnabledState(loadBlockNotifyPrefs().enabled);
     setHydrated(true);
     refresh().catch(() => {});
@@ -200,16 +201,25 @@ export default function AppShell() {
           return next;
         });
       } else if (e.key === '[') {
-        if (weekStart) setWeekStart(addDays(weekStart, -7));
+        if (mainView === 'habits') {
+          if (habitMonth) setHabitMonth(addMonths(habitMonth, -1));
+        } else if (weekStart) {
+          setWeekStart(addDays(weekStart, -7));
+        }
       } else if (e.key === ']') {
-        if (weekStart) setWeekStart(addDays(weekStart, 7));
+        if (mainView === 'habits') {
+          if (habitMonth) setHabitMonth(addMonths(habitMonth, 1));
+        } else if (weekStart) {
+          setWeekStart(addDays(weekStart, 7));
+        }
       } else if (e.key === 't') {
-        setWeekStart(weekStartOf(new Date()));
+        if (mainView === 'habits') setHabitMonth(monthStartOf(new Date()));
+        else setWeekStart(weekStartOf(new Date()));
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [weekStart, setWeekStart]);
+  }, [weekStart, setWeekStart, mainView, habitMonth, setHabitMonth]);
 
   const activeProject = useMemo(
     () => projects.find((p) => p.id === activeProjectId) ?? null,
@@ -543,7 +553,7 @@ export default function AppShell() {
     [activeProjectId, refresh]
   );
 
-  if (!hydrated || !weekStart) {
+  if (!hydrated || !weekStart || !habitMonth) {
     return <div className="app-shell" />;
   }
 
@@ -603,6 +613,10 @@ export default function AppShell() {
           onPrev={() => setWeekStart(addDays(weekStart, -7))}
           onNext={() => setWeekStart(addDays(weekStart, 7))}
           onToday={() => setWeekStart(weekStartOf(new Date()))}
+          habitMonth={habitMonth}
+          onPrevMonth={() => setHabitMonth(addMonths(habitMonth, -1))}
+          onNextMonth={() => setHabitMonth(addMonths(habitMonth, 1))}
+          onThisMonth={() => setHabitMonth(monthStartOf(new Date()))}
           mainView={mainView}
           onViewChange={setMainView}
           activeProject={activeProject}
@@ -614,8 +628,7 @@ export default function AppShell() {
             project={activeProject}
             blocks={blocks}
             habitMarks={habitMarks}
-            range={habitRange}
-            onRangeChange={setHabitRange}
+            month={habitMonth}
             onToggleDay={toggleHabitDay}
             onGoalChange={updateHabitGoal}
           />

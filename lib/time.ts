@@ -106,6 +106,32 @@ export function startOfLocalDay(d: Date): Date {
   return x;
 }
 
+export function monthStartOf(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+export function addMonths(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1);
+}
+
+export function sameMonth(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+export function fmtMonth(d: Date): string {
+  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
+export function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function parseMonthKey(key: string): Date | null {
+  const m = /^(\d{4})-(\d{2})$/.exec(key);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, 1);
+}
+
 /** Local calendar day as YYYY-MM-DD. */
 export function localDateKey(d: Date): string {
   const y = d.getFullYear();

@@ -1088,27 +1088,6 @@ dialog menu button { padding: 7px 14px; }
   line-height: 1.5;
   max-width: 640px;
 }
-.habit-range {
-  display: flex;
-  gap: 2px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 2px;
-}
-.habit-range button {
-  padding: 5px 10px;
-  font-size: 12px;
-  border: none;
-  background: transparent;
-  color: var(--text-2);
-  border-radius: 6px;
-}
-.habit-range button.active {
-  background: var(--surface-3);
-  color: var(--text);
-  font-weight: 600;
-}
 .habit-stats {
   display: flex;
   flex-wrap: wrap;
@@ -1215,32 +1194,14 @@ dialog menu button { padding: 7px 14px; }
   color: var(--text);
 }
 .habit-graph {
-  --habit-cell: 28px;
-  --habit-gap: 3px;
+  --habit-cell: 36px;
+  --habit-gap: 4px;
   display: grid;
   grid-template-columns: auto auto;
-  grid-template-rows: auto auto;
   column-gap: 10px;
-  row-gap: 6px;
   align-items: start;
 }
-.habit-months {
-  grid-column: 1;
-  display: grid;
-  grid-template-columns: repeat(var(--habit-weeks), var(--habit-cell));
-  column-gap: var(--habit-gap);
-  font-size: 11px;
-  color: var(--text-2);
-  font-weight: 500;
-}
-.habit-month {
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .habit-weeks {
-  grid-column: 1;
   display: flex;
   gap: var(--habit-gap);
 }
@@ -1250,8 +1211,6 @@ dialog menu button { padding: 7px 14px; }
   gap: var(--habit-gap);
 }
 .habit-dows {
-  grid-column: 2;
-  grid-row: 2;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1271,11 +1230,11 @@ dialog menu button { padding: 7px 14px; }
 .habit-cell {
   width: var(--habit-cell);
   height: var(--habit-cell);
-  border-radius: 5px;
+  border-radius: 6px;
   border: 1px solid transparent;
   background: #2a2d35;
   color: #e8e8ea;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -1294,7 +1253,12 @@ dialog menu button { padding: 7px 14px; }
   opacity: 0.28;
   cursor: default;
 }
-.habit-cell:disabled:not(.future) { cursor: default; }
+.habit-cell.outside {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+.habit-cell:disabled:not(.future):not(.outside) { cursor: default; }
 
 /* --- Mobile nav bar (hidden on desktop) --- */
 .mobile-nav { display: none; }
@@ -1484,7 +1448,7 @@ dialog menu button { padding: 7px 14px; }
 
   .habit-view { padding: 14px 12px 24px; }
   .habit-card { width: 100%; overflow-x: auto; }
-  .habit-graph { --habit-cell: 24px; }
+  .habit-graph { --habit-cell: 32px; }
   .habit-today-btn { margin-left: 0; width: 100%; }
   .habit-stat { min-width: calc(50% - 6px); flex: 1; }
   .view-switch button { padding: 5px 8px; font-size: 11px; }

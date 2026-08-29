@@ -1,29 +1,15 @@
 import type { HabitMark, TimeBlock } from './types';
-import { addDays, localDateKey, parseLocalDateKey, startOfLocalDay, weekStartOf } from './time';
-
-export const HABIT_RANGES = [
-  { id: '3m', label: '3 months', months: 3 },
-  { id: '6m', label: '6 months', months: 6 },
-  { id: '1y', label: '1 year', months: 12 }
-] as const;
-
-export type HabitRangeId = (typeof HABIT_RANGES)[number]['id'];
+import {
+  addDays,
+  localDateKey,
+  monthStartOf,
+  parseLocalDateKey,
+  sameMonth,
+  startOfLocalDay,
+  weekStartOf
+} from './time';
 
 export const HABIT_DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
-
-export function isHabitRangeId(v: unknown): v is HabitRangeId {
-  return HABIT_RANGES.some((r) => r.id === v);
-}
-
-export function rangeMonths(id: HabitRangeId): number {
-  return HABIT_RANGES.find((r) => r.id === id)?.months ?? 3;
-}
-
-export function rangeTitle(id: HabitRangeId): string {
-  if (id === '6m') return 'Last 6 Months';
-  if (id === '1y') return 'Last Year';
-  return 'Last 3 Months';
-}
 
 /** Every local calendar day a block touches for a project. */
 export function workedDaysFromBlocks(blocks: TimeBlock[], projectId: string): Set<string> {
@@ -107,47 +93,27 @@ export function computeHabitStats(activeDays: Set<string>, today = new Date()): 
   return { current, longest, total };
 }
 
-export interface HabitMonthLabel {
-  key: string;
-  label: string;
-  weekIndex: number;
-  span: number;
-}
-
 export interface HabitGrid {
   weeks: Date[][];
-  months: HabitMonthLabel[];
+  month: Date;
   today: Date;
 }
 
-export function buildHabitGrid(monthsBack: number, today = new Date()): HabitGrid {
+export function buildHabitMonthGrid(month: Date, today = new Date()): HabitGrid {
   const todayStart = startOfLocalDay(today);
-  const rangeStart = new Date(todayStart);
-  rangeStart.setMonth(rangeStart.getMonth() - monthsBack);
-  const start = weekStartOf(rangeStart);
-  const end = weekStartOf(todayStart);
+  const first = monthStartOf(month);
+  const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
+  const start = weekStartOf(first);
+  const end = weekStartOf(last);
 
   const weeks: Date[][] = [];
   for (let cursor = start; cursor.getTime() <= end.getTime(); cursor = addDays(cursor, 7)) {
     weeks.push(Array.from({ length: 7 }, (_, i) => addDays(cursor, i)));
   }
 
-  const months: HabitMonthLabel[] = [];
-  for (let i = 0; i < weeks.length; i++) {
-    const month = weeks[i][0].getMonth();
-    const year = weeks[i][0].getFullYear();
-    const last = months[months.length - 1];
-    if (last && last.key === `${year}-${month}`) {
-      last.span += 1;
-    } else {
-      months.push({
-        key: `${year}-${month}`,
-        label: weeks[i][0].toLocaleDateString(undefined, { month: 'short' }),
-        weekIndex: i,
-        span: 1
-      });
-    }
-  }
+  return { weeks, month: first, today: todayStart };
+}
 
-  return { weeks, months, today: todayStart };
+export function isInHabitMonth(day: Date, month: Date): boolean {
+  return sameMonth(day, month);
 }
