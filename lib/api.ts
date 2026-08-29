@@ -1,4 +1,4 @@
-import type { AppState, Project, Ticket, TimeBlock } from './types';
+import type { AppState, HabitMark, Project, Ticket, TimeBlock } from './types';
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -57,5 +57,15 @@ export const api = {
     }).then((r) => json<Ticket>(r)),
 
   deleteTicket: (id: string): Promise<{ ok: true }> =>
-    fetch('/api/tickets/' + id, { method: 'DELETE' }).then((r) => json(r))
+    fetch('/api/tickets/' + id, { method: 'DELETE' }).then((r) => json(r)),
+
+  addHabitMark: (body: { projectId: string; day: string }): Promise<HabitMark> =>
+    fetch('/api/habits', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then((r) => json<HabitMark>(r)),
+
+  deleteHabitMark: (id: string): Promise<{ ok: true }> =>
+    fetch('/api/habits/' + id, { method: 'DELETE' }).then((r) => json(r))
 };

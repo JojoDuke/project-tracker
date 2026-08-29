@@ -154,7 +154,14 @@ interface ProjectDialogProps {
   onClose: () => void;
   onSave: (
     existingId: string | null,
-    payload: { name: string; color: string; kind: ProjectKind; client: string; status: ProjectStatus }
+    payload: {
+      name: string;
+      color: string;
+      kind: ProjectKind;
+      client: string;
+      status: ProjectStatus;
+      habitGoal: number | null;
+    }
   ) => Promise<void> | void;
   onDelete: (id: string) => Promise<void> | void;
 }
@@ -168,6 +175,7 @@ export function ProjectDialog({ target, onClose, onSave, onDelete }: ProjectDial
   const [kind, setKind] = useState<ProjectKind>('personal');
   const [client, setClient] = useState('');
   const [status, setStatus] = useState<ProjectStatus>('active');
+  const [habitGoal, setHabitGoal] = useState('');
 
   useEffect(() => {
     if (target === undefined) return;
@@ -177,12 +185,14 @@ export function ProjectDialog({ target, onClose, onSave, onDelete }: ProjectDial
       setKind(target.kind ?? 'personal');
       setClient(target.client ?? '');
       setStatus(target.status ?? (target.archived ? 'done' : 'active'));
+      setHabitGoal(target.habitGoal != null ? String(target.habitGoal) : '');
     } else {
       setName('');
       setColor('#6aa9ff');
       setKind('personal');
       setClient('');
       setStatus('active');
+      setHabitGoal('');
     }
   }, [target]);
 
@@ -214,7 +224,8 @@ export function ProjectDialog({ target, onClose, onSave, onDelete }: ProjectDial
               color,
               kind,
               client: kind === 'client' ? client.trim() : '',
-              status
+              status,
+              habitGoal: habitGoal.trim() === '' ? null : Number(habitGoal)
             });
             return;
           }
@@ -286,6 +297,17 @@ export function ProjectDialog({ target, onClose, onSave, onDelete }: ProjectDial
             ))}
           </div>
         </div>
+        <label>
+          Habit goal (days)
+          <input
+            type="number"
+            min={1}
+            max={10000}
+            placeholder="e.g. 100"
+            value={habitGoal}
+            onChange={(e) => setHabitGoal(e.target.value)}
+          />
+        </label>
         <div className="field-group">
           <span className="field-label">Color</span>
           <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />

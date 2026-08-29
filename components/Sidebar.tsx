@@ -159,7 +159,7 @@ export default function Sidebar({
           <p className="block-notify-hint">Allow notifications when your browser prompts you.</p>
         )}
         <p className="hint">
-          Drag on grid to block · click block to edit · hover block + × to delete · n: new project · T: new ticket · q: quick log · p: pomodoro · [ ]: week nav · t: today
+          Drag on grid to block · click block to edit · hover block + × to delete · n: new project · T: new ticket · q: quick log · p: pomodoro · h: habits · [ ]: week nav · t: today
         </p>
       </footer>
     </aside>

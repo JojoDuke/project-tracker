@@ -6,11 +6,15 @@ import { addDays, fmtDate } from '@/lib/time';
 import { pomoAudio } from '@/lib/pomo-audio';
 import { PomoSettingsDialog } from './Dialogs';
 
+export type MainView = 'calendar' | 'habits';
+
 interface Props {
   weekStart: Date;
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  mainView: MainView;
+  onViewChange: (view: MainView) => void;
   activeProject: Project | null;
   onWorkBlockLogged: (start: Date, end: Date) => Promise<void> | void;
   hasActiveProject: boolean;
@@ -74,6 +78,8 @@ export default function TopBar({
   onPrev,
   onNext,
   onToday,
+  mainView,
+  onViewChange,
   activeProject,
   onWorkBlockLogged,
   hasActiveProject
@@ -211,18 +217,45 @@ export default function TopBar({
 
   return (
     <header id="topbar">
-      <button onClick={onPrev} title="Previous week ([)">
-        ‹
-      </button>
-      <button onClick={onToday} title="Today (t)">
-        Today
-      </button>
-      <button onClick={onNext} title="Next week (])">
-        ›
-      </button>
-      <span id="weekLabel">
-        {fmtDate(weekStart)} – {fmtDate(we)}
-      </span>
+      <div className="view-switch" role="tablist" aria-label="Main view">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mainView === 'calendar'}
+          className={mainView === 'calendar' ? 'active' : ''}
+          onClick={() => onViewChange('calendar')}
+        >
+          Calendar
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mainView === 'habits'}
+          className={mainView === 'habits' ? 'active' : ''}
+          onClick={() => onViewChange('habits')}
+        >
+          Habits
+        </button>
+      </div>
+      {mainView === 'calendar' && (
+        <>
+          <button onClick={onPrev} title="Previous week ([)">
+            ‹
+          </button>
+          <button onClick={onToday} title="Today (t)">
+            Today
+          </button>
+          <button onClick={onNext} title="Next week (])">
+            ›
+          </button>
+          <span id="weekLabel">
+            {fmtDate(weekStart)} – {fmtDate(we)}
+          </span>
+        </>
+      )}
+      {mainView === 'habits' && (
+        <span id="weekLabel">Days you showed up</span>
+      )}
       <span className="spacer" />
       <div
         id="pomodoro"

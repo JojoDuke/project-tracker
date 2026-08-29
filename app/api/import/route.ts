@@ -16,12 +16,14 @@ export async function POST(req: Request) {
   const state: AppState = {
     projects: body.projects,
     tickets: Array.isArray(body.tickets) ? body.tickets : [],
-    blocks: Array.isArray(body.blocks) ? body.blocks : []
+    blocks: Array.isArray(body.blocks) ? body.blocks : [],
+    habitMarks: Array.isArray(body.habitMarks) ? body.habitMarks : []
   };
   await replaceAllData(state);
   return NextResponse.json({ ok: true, counts: {
     projects: state.projects.length,
     tickets: state.tickets.length,
-    blocks: state.blocks.length
+    blocks: state.blocks.length,
+    habitMarks: state.habitMarks.length
   }});
 }

@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { AppState, Project, ProjectStatus, Ticket, TimeBlock } from '@/lib/types';
+import type { AppState, HabitMark, Project, ProjectStatus, Ticket, TimeBlock } from '@/lib/types';
+import { normalizeHabitGoal } from '@/lib/types';
+import { isHabitRangeId, markForDay, type HabitRangeId } from '@/lib/habits';
 import { api } from '@/lib/api';
 import {
   clearBlockFiredKeys,
@@ -10,9 +12,10 @@ import {
   saveBlockNotifyPrefs
 } from '@/lib/block-notifications';
 import { addDays, snap, weekStartOf } from '@/lib/time';
+import HabitTracker from './HabitTracker';
 import Sidebar from './Sidebar';
 import TicketsPanel from './TicketsPanel';
-import TopBar from './TopBar';
+import TopBar, { type MainView } from './TopBar';
 import WeekGrid from './WeekGrid';
 import { useBlockNotifications } from './useBlockNotifications';
 import {
@@ -31,6 +34,8 @@ interface UiPrefs {
   showDoneTickets?: boolean;
   sidebarCollapsed?: boolean;
   ticketsCollapsed?: boolean;
+  mainView?: MainView;
+  habitRange?: HabitRangeId;
 }
 
 function loadUiPrefs(): UiPrefs {
@@ -53,6 +58,9 @@ export default function AppShell() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [blocks, setBlocks] = useState<TimeBlock[]>([]);
+  const [habitMarks, setHabitMarks] = useState<HabitMark[]>([]);
+  const [mainView, setMainViewState] = useState<MainView>('calendar');
+  const [habitRange, setHabitRangeState] = useState<HabitRangeId>('3m');
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [weekStart, setWeekStartState] = useState<Date | null>(null);
   const [showDoneTickets, setShowDoneTicketsState] = useState<boolean>(true);
@@ -107,10 +115,21 @@ export default function AppShell() {
     saveBlockNotifyPrefs({ enabled });
   }, []);
 
+  const setMainView = useCallback((view: MainView) => {
+    setMainViewState(view);
+    saveUiPrefs({ mainView: view });
+  }, []);
+
+  const setHabitRange = useCallback((range: HabitRangeId) => {
+    setHabitRangeState(range);
+    saveUiPrefs({ habitRange: range });
+  }, []);
+
   const applyState = useCallback((s: AppState) => {
     setProjects(s.projects);
     setTickets(s.tickets);
     setBlocks(s.blocks);
+    setHabitMarks(s.habitMarks ?? []);
     setActiveProjectIdState((prev) => {
       if (prev && s.projects.find((p) => p.id === prev)) return prev;
       return s.projects[0]?.id ?? null;
@@ -130,6 +149,10 @@ export default function AppShell() {
     setShowDoneTicketsState(prefs.showDoneTickets ?? true);
     setSidebarCollapsedState(prefs.sidebarCollapsed ?? false);
     setTicketsCollapsedState(prefs.ticketsCollapsed ?? false);
+    if (prefs.mainView === 'calendar' || prefs.mainView === 'habits') {
+      setMainViewState(prefs.mainView);
+    }
+    if (isHabitRangeId(prefs.habitRange)) setHabitRangeState(prefs.habitRange);
     setBlockNotifyEnabledState(loadBlockNotifyPrefs().enabled);
     setHydrated(true);
     refresh().catch(() => {});
@@ -169,6 +192,13 @@ export default function AppShell() {
         e.preventDefault();
         const el = document.getElementById('newTicketTitle') as HTMLInputElement | null;
         el?.focus();
+      } else if (e.key === 'h') {
+        e.preventDefault();
+        setMainViewState((v) => {
+          const next = v === 'habits' ? 'calendar' : 'habits';
+          saveUiPrefs({ mainView: next });
+          return next;
+        });
       } else if (e.key === '[') {
         if (weekStart) setWeekStart(addDays(weekStart, -7));
       } else if (e.key === ']') {
@@ -364,7 +394,7 @@ export default function AppShell() {
 
   // Project actions
   const upsertProject = useCallback(
-    async (existingId: string | null, payload: { name: string; color: string; kind: 'personal' | 'client'; client: string; status: ProjectStatus }) => {
+    async (existingId: string | null, payload: { name: string; color: string; kind: 'personal' | 'client'; client: string; status: ProjectStatus; habitGoal: number | null }) => {
       if (existingId) {
         setProjects((ps) => ps.map((p) => (p.id === existingId ? { ...p, ...payload } : p)));
         try {
@@ -382,6 +412,7 @@ export default function AppShell() {
           client: payload.client,
           status: payload.status,
           archived: false,
+          habitGoal: payload.habitGoal,
           createdAt: new Date().toISOString()
         };
         setProjects((ps) => [...ps, optimistic]);
@@ -404,6 +435,7 @@ export default function AppShell() {
       setProjects((ps) => ps.filter((p) => p.id !== id));
       setTickets((ts) => ts.filter((t) => t.projectId !== id));
       setBlocks((bs) => bs.filter((b) => b.projectId !== id));
+      setHabitMarks((ms) => ms.filter((m) => m.projectId !== id));
       try {
         await api.deleteProject(id);
       } catch {
@@ -442,6 +474,73 @@ export default function AppShell() {
       }
     },
     [refresh]
+  );
+
+  const addHabitMark = useCallback(
+    async (projectId: string, day: string) => {
+      const existing = markForDay(habitMarks, projectId, day);
+      if (existing) return;
+      const tempId = 'tmp-' + Math.random().toString(36).slice(2);
+      const optimistic: HabitMark = {
+        id: tempId,
+        projectId,
+        day,
+        createdAt: new Date().toISOString()
+      };
+      setHabitMarks((ms) => [...ms, optimistic]);
+      try {
+        const created = await api.addHabitMark({ projectId, day });
+        setHabitMarks((ms) => {
+          const withoutTemp = ms.filter((m) => m.id !== tempId && !(m.projectId === projectId && m.day === day && m.id !== created.id));
+          return [...withoutTemp, created];
+        });
+      } catch {
+        setHabitMarks((ms) => ms.filter((m) => m.id !== tempId));
+        await refresh();
+        alert('Could not save that check-in. Run supabase/habit-tracker.sql in the Supabase SQL editor, then refresh.');
+      }
+    },
+    [habitMarks, refresh]
+  );
+
+  const deleteHabitMark = useCallback(
+    async (id: string) => {
+      setHabitMarks((ms) => ms.filter((m) => m.id !== id));
+      try {
+        await api.deleteHabitMark(id);
+      } catch {
+        await refresh();
+      }
+    },
+    [refresh]
+  );
+
+  const toggleHabitDay = useCallback(
+    (day: string) => {
+      if (!activeProjectId) {
+        alert('Select or create a project first');
+        return;
+      }
+      const existing = markForDay(habitMarks, activeProjectId, day);
+      if (existing) void deleteHabitMark(existing.id);
+      else void addHabitMark(activeProjectId, day);
+    },
+    [activeProjectId, habitMarks, addHabitMark, deleteHabitMark]
+  );
+
+  const updateHabitGoal = useCallback(
+    async (goal: number | null) => {
+      if (!activeProjectId) return;
+      const next = normalizeHabitGoal(goal);
+      setProjects((ps) => ps.map((p) => (p.id === activeProjectId ? { ...p, habitGoal: next } : p)));
+      try {
+        await api.updateProject(activeProjectId, { habitGoal: next });
+      } catch {
+        await refresh();
+        alert('Could not save the habit goal. Run supabase/habit-tracker.sql in the Supabase SQL editor, then try again.');
+      }
+    },
+    [activeProjectId, refresh]
   );
 
   if (!hydrated || !weekStart) {
@@ -504,26 +603,40 @@ export default function AppShell() {
           onPrev={() => setWeekStart(addDays(weekStart, -7))}
           onNext={() => setWeekStart(addDays(weekStart, 7))}
           onToday={() => setWeekStart(weekStartOf(new Date()))}
+          mainView={mainView}
+          onViewChange={setMainView}
           activeProject={activeProject}
           onWorkBlockLogged={onPomoWorkBlock}
           hasActiveProject={!!activeProjectId}
         />
-        <WeekGrid
-          weekStart={weekStart}
-          projects={projects}
-          blocks={blocks}
-          activeProjectId={activeProjectId}
-          onCreateBlock={(start, end) => {
-            if (!activeProjectId) {
-              alert('Select or create a project first');
-              return;
-            }
-            return addBlock(activeProjectId, start, end);
-          }}
-          onOpenBlock={(b) => setBlockEditing(b)}
-          onDeleteBlock={deleteBlock}
-          onMoveBlock={(id, start, end) => updateBlock(id, { start, end })}
-        />
+        {mainView === 'habits' ? (
+          <HabitTracker
+            project={activeProject}
+            blocks={blocks}
+            habitMarks={habitMarks}
+            range={habitRange}
+            onRangeChange={setHabitRange}
+            onToggleDay={toggleHabitDay}
+            onGoalChange={updateHabitGoal}
+          />
+        ) : (
+          <WeekGrid
+            weekStart={weekStart}
+            projects={projects}
+            blocks={blocks}
+            activeProjectId={activeProjectId}
+            onCreateBlock={(start, end) => {
+              if (!activeProjectId) {
+                alert('Select or create a project first');
+                return;
+              }
+              return addBlock(activeProjectId, start, end);
+            }}
+            onOpenBlock={(b) => setBlockEditing(b)}
+            onDeleteBlock={deleteBlock}
+            onMoveBlock={(id, start, end) => updateBlock(id, { start, end })}
+          />
+        )}
       </main>
 
       <BlockDialog
@@ -590,11 +703,24 @@ export default function AppShell() {
           Projects
         </button>
         <button
-          className={mobileDrawer === 'none' ? 'active' : ''}
-          onClick={() => setMobileDrawer('none')}
+          className={mobileDrawer === 'none' && mainView === 'calendar' ? 'active' : ''}
+          onClick={() => {
+            setMainView('calendar');
+            setMobileDrawer('none');
+          }}
         >
           <span className="nav-icon">⊞</span>
           Calendar
+        </button>
+        <button
+          className={mobileDrawer === 'none' && mainView === 'habits' ? 'active' : ''}
+          onClick={() => {
+            setMainView('habits');
+            setMobileDrawer('none');
+          }}
+        >
+          <span className="nav-icon">▦</span>
+          Habits
         </button>
         <button
           className={mobileDrawer === 'tickets' ? 'active' : ''}
