@@ -19,6 +19,8 @@ interface Props {
   blocks: TimeBlock[];
   habitMarks: HabitMark[];
   month: Date;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
   onToggleDay: (day: string) => void;
   onGoalChange: (goal: number | null) => void;
 }
@@ -37,6 +39,8 @@ export default function HabitTracker({
   blocks,
   habitMarks,
   month,
+  onPrevMonth,
+  onNextMonth,
   onToggleDay,
   onGoalChange
 }: Props) {
@@ -94,72 +98,67 @@ export default function HabitTracker({
         </p>
       </header>
 
-      <section className="habit-stats" aria-label="Habit stats">
-        <div className="habit-stat">
-          <span className="habit-stat-value">{stats.current}</span>
-          <span className="habit-stat-label">Current streak</span>
-        </div>
-        <div className="habit-stat">
-          <span className="habit-stat-value">{stats.longest}</span>
-          <span className="habit-stat-label">Longest streak</span>
-        </div>
-        <div className="habit-stat">
-          <span className="habit-stat-value">{stats.total}</span>
-          <span className="habit-stat-label">{goal ? `of ${goal} days` : 'Days shown up'}</span>
-        </div>
-        <div className="habit-stat habit-goal-stat">
-          <label>
-            Goal
-            <input
-              type="number"
-              min={1}
-              max={10000}
-              placeholder="100"
-              value={goalValue}
-              onChange={(e) => setGoalDraft(e.target.value)}
-              onBlur={() => {
-                const next = goalDraft === null ? goalValue : goalDraft;
-                const n = next.trim() === '' ? null : Number(next);
-                setGoalDraft(null);
-                onGoalChange(Number.isFinite(n as number) ? (n as number) : null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-              }}
-            />
-          </label>
-        </div>
-        <button
-          type="button"
-          className={`habit-today-btn ${todayActive ? 'done' : 'primary'}`}
-          onClick={() => onToggleDay(todayKey)}
-          disabled={todayFromWork && !todayMarked}
-          title={
-            todayFromWork && !todayMarked
-              ? 'Today already counts from logged time'
-              : todayMarked
-                ? 'Clear today’s check-in'
-                : 'Mark today'
-          }
-        >
-          {todayActive ? 'Today counted' : 'Mark today'}
-        </button>
-      </section>
+      <div className="habit-toolbar">
+        <div className="habit-board">
+          <section className="habit-stats" aria-label="Habit stats">
+            <div className="habit-stat">
+              <span className="habit-stat-value">{stats.current}</span>
+              <span className="habit-stat-label">Current streak</span>
+            </div>
+            <div className="habit-stat">
+              <span className="habit-stat-value">{stats.longest}</span>
+              <span className="habit-stat-label">Longest streak</span>
+            </div>
+            <div className="habit-stat">
+              <span className="habit-stat-value">{stats.total}</span>
+              <span className="habit-stat-label">{goal ? `of ${goal} days` : 'Days shown up'}</span>
+            </div>
+            <div className="habit-stat habit-goal-stat">
+              <label>
+                Goal
+                <input
+                  type="number"
+                  min={1}
+                  max={10000}
+                  placeholder="100"
+                  value={goalValue}
+                  onChange={(e) => setGoalDraft(e.target.value)}
+                  onBlur={() => {
+                    const next = goalDraft === null ? goalValue : goalDraft;
+                    const n = next.trim() === '' ? null : Number(next);
+                    setGoalDraft(null);
+                    onGoalChange(Number.isFinite(n as number) ? (n as number) : null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  }}
+                />
+              </label>
+            </div>
+          </section>
 
-      {goal && (
-        <div className="habit-progress" aria-label={`${progress}% of goal`}>
-          <div className="habit-progress-bar">
-            <span style={{ width: `${progress ?? 0}%`, background: project.color }} />
-          </div>
-          <span className="habit-progress-label">
-            {stats.total} / {goal}
-            {stats.total >= goal ? ' — goal hit' : ''}
-          </span>
-        </div>
-      )}
+          {goal && (
+            <div className="habit-progress" aria-label={`${progress}% of goal`}>
+              <div className="habit-progress-bar">
+                <span style={{ width: `${progress ?? 0}%`, background: project.color }} />
+              </div>
+              <span className="habit-progress-label">
+                {stats.total} / {goal}
+                {stats.total >= goal ? ' — goal hit' : ''}
+              </span>
+            </div>
+          )}
 
-      <section className="habit-card">
-        <h3>{fmtMonth(grid.month)}</h3>
+          <section className="habit-card">
+        <div className="habit-month-nav">
+          <button type="button" onClick={onPrevMonth} title="Previous month ([)" aria-label="Previous month">
+            ‹
+          </button>
+          <h3>{fmtMonth(grid.month)}</h3>
+          <button type="button" onClick={onNextMonth} title="Next month (])" aria-label="Next month">
+            ›
+          </button>
+        </div>
         <div className="habit-graph" style={{ '--habit-weeks': String(grid.weeks.length) } as React.CSSProperties}>
           <div className="habit-weeks">
             {grid.weeks.map((week) => (
@@ -222,6 +221,23 @@ export default function HabitTracker({
           </ol>
         </div>
       </section>
+        </div>
+        <button
+          type="button"
+          className={`habit-today-btn ${todayActive ? 'done' : 'primary'}`}
+          onClick={() => onToggleDay(todayKey)}
+          disabled={todayFromWork && !todayMarked}
+          title={
+            todayFromWork && !todayMarked
+              ? 'Today already counts from logged time'
+              : todayMarked
+                ? 'Clear today’s check-in'
+                : 'Mark today'
+          }
+        >
+          {todayActive ? 'Today counted' : 'Mark today'}
+        </button>
+      </div>
     </div>
   );
 }

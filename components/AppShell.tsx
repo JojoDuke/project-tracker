@@ -613,9 +613,6 @@ export default function AppShell() {
           onPrev={() => setWeekStart(addDays(weekStart, -7))}
           onNext={() => setWeekStart(addDays(weekStart, 7))}
           onToday={() => setWeekStart(weekStartOf(new Date()))}
-          habitMonth={habitMonth}
-          onPrevMonth={() => setHabitMonth(addMonths(habitMonth, -1))}
-          onNextMonth={() => setHabitMonth(addMonths(habitMonth, 1))}
           onThisMonth={() => setHabitMonth(monthStartOf(new Date()))}
           mainView={mainView}
           onViewChange={setMainView}
@@ -629,6 +626,8 @@ export default function AppShell() {
             blocks={blocks}
             habitMarks={habitMarks}
             month={habitMonth}
+            onPrevMonth={() => setHabitMonth(addMonths(habitMonth, -1))}
+            onNextMonth={() => setHabitMonth(addMonths(habitMonth, 1))}
             onToggleDay={toggleHabitDay}
             onGoalChange={updateHabitGoal}
           />

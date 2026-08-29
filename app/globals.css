@@ -1088,6 +1088,19 @@ dialog menu button { padding: 7px 14px; }
   line-height: 1.5;
   max-width: 640px;
 }
+.habit-toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.habit-board {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
 .habit-stats {
   display: flex;
   flex-wrap: wrap;
@@ -1145,10 +1158,11 @@ dialog menu button { padding: 7px 14px; }
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .habit-today-btn {
-  margin-left: auto;
-  align-self: center;
+  align-self: flex-start;
+  margin-top: 2px;
   padding: 10px 16px;
   font-weight: 600;
+  flex-shrink: 0;
 }
 .habit-today-btn.done {
   color: var(--success);
@@ -1183,32 +1197,56 @@ dialog menu button { padding: 7px 14px; }
   background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 16px 18px 18px;
-  width: fit-content;
+  padding: 10px 12px 12px;
+  width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
 }
-.habit-card h3 {
-  margin: 0 0 14px;
+.habit-month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+.habit-month-nav h3 {
+  margin: 0;
+  flex: 1;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
+  text-align: center;
+}
+.habit-month-nav button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
 }
 .habit-graph {
-  --habit-cell: 36px;
-  --habit-gap: 4px;
+  --habit-cell: 28px;
+  --habit-gap: 3px;
   display: grid;
-  grid-template-columns: auto auto;
-  column-gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px;
   align-items: start;
 }
 .habit-weeks {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(var(--habit-weeks), minmax(0, 1fr));
   gap: var(--habit-gap);
+  min-width: 0;
 }
 .habit-week {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: repeat(7, var(--habit-cell));
   gap: var(--habit-gap);
+  min-width: 0;
 }
 .habit-dows {
   list-style: none;
@@ -1228,13 +1266,14 @@ dialog menu button { padding: 7px 14px; }
   align-items: center;
 }
 .habit-cell {
-  width: var(--habit-cell);
+  width: 100%;
+  min-width: 0;
   height: var(--habit-cell);
-  border-radius: 6px;
+  border-radius: 5px;
   border: 1px solid transparent;
   background: #2a2d35;
   color: #e8e8ea;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -1447,9 +1486,9 @@ dialog menu button { padding: 7px 14px; }
   #newTicketForm { padding: 6px 10px; }
 
   .habit-view { padding: 14px 12px 24px; }
-  .habit-card { width: 100%; overflow-x: auto; }
-  .habit-graph { --habit-cell: 32px; }
-  .habit-today-btn { margin-left: 0; width: 100%; }
+  .habit-card { width: 100%; }
+  .habit-graph { --habit-cell: 26px; }
+  .habit-today-btn { width: auto; }
   .habit-stat { min-width: calc(50% - 6px); flex: 1; }
   .view-switch button { padding: 5px 8px; font-size: 11px; }
 }
