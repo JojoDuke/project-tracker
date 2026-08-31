@@ -66,7 +66,8 @@ export default function HabitTracker({
 
   const goal = project?.habitGoal ?? null;
   const goalValue = goalDraft ?? (goal != null ? String(goal) : '');
-  const progress = goal && goal > 0 ? Math.min(100, Math.round((stats.total / goal) * 100)) : null;
+  const daysTowardGoal = stats.current;
+  const progress = goal && goal > 0 ? Math.min(100, Math.round((daysTowardGoal / goal) * 100)) : null;
 
   if (!project) {
     return (
@@ -110,7 +111,7 @@ export default function HabitTracker({
               <span className="habit-stat-label">Longest streak</span>
             </div>
             <div className="habit-stat">
-              <span className="habit-stat-value">{stats.total}</span>
+              <span className="habit-stat-value">{daysTowardGoal}</span>
               <span className="habit-stat-label">{goal ? `of ${goal} days` : 'Days shown up'}</span>
             </div>
             <div className="habit-stat habit-goal-stat">
@@ -143,8 +144,8 @@ export default function HabitTracker({
                 <span style={{ width: `${progress ?? 0}%`, background: project.color }} />
               </div>
               <span className="habit-progress-label">
-                {stats.total} / {goal}
-                {stats.total >= goal ? ' — goal hit' : ''}
+                {daysTowardGoal} / {goal}
+                {daysTowardGoal >= goal ? ' — goal hit' : ''}
               </span>
             </div>
           )}
