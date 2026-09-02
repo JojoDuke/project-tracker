@@ -47,7 +47,7 @@ export default function Sidebar({
   notifyPermission,
   onBlockNotifyChange
 }: Props) {
-  const [archiveCollapsed, setArchiveCollapsed] = useState(false);
+  const [archiveCollapsed, setArchiveCollapsed] = useState(true);
 
   const lastTouched = useMemo(() => {
     const map = new Map<string, string>();
